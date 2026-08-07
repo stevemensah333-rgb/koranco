@@ -18,4 +18,9 @@ def clean_master_data_tables() -> None:
     from koranco.db.session import SessionFactory
 
     with SessionFactory.begin() as session:
-        session.execute(text("TRUNCATE operational_audit_events, farm_units, workers"))
+        session.execute(
+            text(
+                "TRUNCATE attendance_sync_operations, attendance_entries, attendance_sessions, "
+                "operational_audit_events, farm_units, workers"
+            )
+        )

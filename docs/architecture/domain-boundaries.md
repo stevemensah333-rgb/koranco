@@ -18,7 +18,7 @@ Owns confirmed organizational and physical farm concepts such as fields or block
 
 ### Attendance
 
-Owns confirmed attendance capture, validation, correction, and query behavior. It refers to workers and may refer to farm structure after those relationships are validated.
+Owns online attendance sessions and entries, draft/submission state, attendance validation, duplicate protection, correction, and query behavior. It references stable Worker identities but resolves their current display details from the Worker register. It has no FarmUnit, crew, task, or payroll relationship; adding one requires confirmed requirements.
 
 ### Harvest
 
@@ -30,7 +30,7 @@ Provides tamper-resistant history for significant actions and corrections across
 
 ### Synchronization
 
-Coordinates durable delivery, idempotency, sync visibility, and conflict handling for explicitly offline-capable domain operations. It does not decide domain conflicts independently; the owning domain defines their meaning.
+The implemented boundary coordinates durable delivery, owner isolation, idempotency, sync visibility, and conflicts only for attendance capture. Attendance-specific ingestion remains beside the attendance domain and invokes its rules. It is not a universal synchronization framework and does not decide domain conflicts independently.
 
 ### Reporting
 
@@ -49,4 +49,3 @@ Coordinates authorized operational configuration and user-facing administrative 
 - Administration orchestrates approved capabilities and does not become a miscellaneous business-logic module.
 - Circular module imports or mutual ownership indicate a boundary problem and should be resolved before adding abstractions.
 - Cross-domain transactions may remain inside the monolith when correctness requires them; event-driven distribution is not a default.
-

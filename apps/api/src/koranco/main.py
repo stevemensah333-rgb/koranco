@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from koranco.api import router
+from koranco.attendance.routes import router as attendance_router
 from koranco.common.errors import install_error_handlers
 from koranco.common.logging import configure_logging
 from koranco.common.request_id import RequestIdMiddleware
@@ -35,3 +36,4 @@ app.include_router(identity_router)
 app.include_router(administration_router)
 app.include_router(workers_router)
 app.include_router(farm_structure_router)
+app.include_router(attendance_router)

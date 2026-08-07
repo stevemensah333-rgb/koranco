@@ -1,4 +1,4 @@
-.PHONY: setup infra-up infra-down migrate dev-api dev-web format lint typecheck test build check
+.PHONY: setup infra-up infra-down migrate dev-api dev-web format lint typecheck test e2e build check
 
 PNPM ?= corepack pnpm
 UV ?= uv
@@ -37,6 +37,9 @@ typecheck:
 test:
 	cd apps/api && $(UV) run pytest
 	cd apps/web && $(PNPM) test
+
+e2e:
+	cd apps/web && $(PNPM) e2e
 
 build:
 	cd apps/web && $(PNPM) build

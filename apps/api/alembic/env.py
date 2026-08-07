@@ -3,6 +3,7 @@ from logging.config import fileConfig
 from sqlalchemy import engine_from_config, pool
 
 from alembic import context
+from koranco.attendance import models as attendance_models  # noqa: F401
 from koranco.config.settings import get_settings
 from koranco.db.base import Base
 from koranco.farm_structure import models as farm_structure_models  # noqa: F401

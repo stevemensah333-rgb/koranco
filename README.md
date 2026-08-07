@@ -4,7 +4,7 @@ Koranco is a production-oriented system for digitizing priority operations at Ko
 
 ## Project status
 
-The repository contains the runnable technical foundation, visual system, application-managed authentication, confirmed role/account administration, Worker register, Farm Structure register, and append-only operational audit foundation. Attendance, harvest, reporting, offline synchronization, and other later workflows have not started.
+The repository contains the runnable technical foundation, visual system, application-managed authentication, confirmed role/account administration, Worker register, Farm Structure register, production-oriented online/offline attendance capture, and append-only operational audit foundation. Harvest, reporting, and other later workflows have not started.
 
 ## Architecture
 
@@ -91,13 +91,25 @@ make check
 
 Individual `make lint`, `make typecheck`, `make test`, and `make build` targets are also available. `make format` changes files; the other quality targets are non-destructive. See [local development](docs/development/local-development.md) for direct commands and troubleshooting.
 
+Attendance browser E2E uses an isolated `koranco_e2e` database and Chromium:
+
+```sh
+cd apps/web
+pnpm exec playwright install chromium-headless-shell
+pnpm e2e
+```
+
+The guarded setup creates/resets only `koranco_e2e`; never point the E2E seeder at development or production data.
+
 ## Documentation
 
 - [Product scope](docs/product/product-scope.md)
+- [Online attendance](docs/product/attendance.md)
 - [Unresolved requirements](docs/product/unresolved-requirements.md)
 - [Architecture overview](docs/architecture/overview.md)
 - [Domain boundaries](docs/architecture/domain-boundaries.md)
 - [Offline synchronization principles](docs/architecture/offline-sync.md)
+- [Physical-device offline attendance test](docs/operations/offline-attendance-field-test.md)
 - [Security principles](docs/architecture/security.md)
 - [Authentication and authorization](docs/architecture/authentication.md)
 - [Data integrity principles](docs/architecture/data-integrity.md)

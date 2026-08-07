@@ -25,7 +25,7 @@ SameSite Lax adds browser protection but is not treated as the sole CSRF defense
 
 ## Authorization
 
-Backend dependencies load the current user and centrally enforce permissions. Koranco's fixed roles are Manager, Supervisor, and Worker; the authoritative mapping is in `identity/permissions.py`. Managers receive approved account, session, security-event, Worker-register, FarmUnit, and operational-audit permissions. Supervisors receive read-only Worker and FarmUnit access. Worker application accounts receive only `system.status.read`. Route handlers depend on permissions rather than role comparisons.
+Backend dependencies load the current user and centrally enforce permissions. Koranco's fixed roles are Manager, Supervisor, and Worker; the authoritative mapping is in `identity/permissions.py`. Managers receive approved account, session, security-event, Worker-register, FarmUnit, operational-audit, and attendance permissions. Supervisors receive read-only Worker and FarmUnit access plus `attendance.read`, `attendance.record`, and `attendance.correct`. Worker application accounts receive only `system.status.read`. Route handlers depend on permissions rather than role comparisons.
 
 Application users and farm workers remain different entities. Worker accounts are optional and are never created automatically from farm-worker records.
 
@@ -59,4 +59,4 @@ The command prompts twice for the password without placing it in shell history, 
 
 ## Offline implications
 
-Authentication and management require connectivity; passwords are never validated offline. Future Supervisor field workflows may temporarily continue after prior successful online authentication, but duration and authorization reconciliation belong to later sync design. Disabling an offline user cannot reach the device immediately. Legitimately queued work must not simply be deleted when revocation is discovered; later synchronization policy must define review and attribution.
+Authentication and management require connectivity; passwords are never validated offline. Attendance capture may continue for at most 12 hours after successful server validation using non-secret owner/expiry metadata. No cookie, password, verifier, CSRF secret, or reusable token is stored offline. Disabling an offline user cannot reach the device immediately. On reconnection, revoked authentication stops sync and revoked attendance permission moves preserved work to needs attention. Only the same reauthenticated application user may resume synchronization.

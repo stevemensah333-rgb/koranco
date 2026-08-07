@@ -22,21 +22,37 @@ export function csrfHeaders(): Record<string, string> {
   return { "X-CSRF-Token": readCsrfToken() };
 }
 
-export function login(
+async function preserveOfflineAuthorization(user: AuthenticatedUser) {
+  if (
+    typeof window !== "undefined" &&
+    user.permissions.includes("attendance.record")
+  ) {
+    const { recordOfflineLease } =
+      await import("@/modules/attendance/offline/db");
+    await recordOfflineLease(user);
+  }
+  return user;
+}
+
+export async function login(
   loginIdentifier: string,
   password: string,
 ): Promise<AuthenticatedUser> {
-  return apiRequest("/api/v1/auth/login", {
+  const user = await apiRequest<AuthenticatedUser>("/api/v1/auth/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ login_identifier: loginIdentifier, password }),
   });
+  return preserveOfflineAuthorization(user);
 }
 
-export function getCurrentSession(
+export async function getCurrentSession(
   signal?: AbortSignal,
 ): Promise<AuthenticatedUser> {
-  return apiRequest("/api/v1/auth/session", { signal });
+  const user = await apiRequest<AuthenticatedUser>("/api/v1/auth/session", {
+    signal,
+  });
+  return preserveOfflineAuthorization(user);
 }
 
 export function logout(): Promise<void> {

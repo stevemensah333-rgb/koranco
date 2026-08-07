@@ -48,7 +48,8 @@ class UserPermission(Base):
             "'sessions.revoke', 'security_events.read', 'workers.read', 'workers.create', "
             "'workers.update', 'workers.deactivate', 'farm_structure.read', "
             "'farm_structure.create', 'farm_structure.update', "
-            "'farm_structure.deactivate', 'operational_audit.read')",
+            "'farm_structure.deactivate', 'operational_audit.read', "
+            "'attendance.read', 'attendance.record', 'attendance.correct')",
             name="ck_user_permissions_known_permission",
         ),
     )

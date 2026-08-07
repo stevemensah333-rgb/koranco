@@ -50,9 +50,25 @@ export function AuthenticatedHome() {
   }, [router]);
 
   async function handleLogout() {
+    if (user) {
+      const { hasPendingForOwner } =
+        await import("@/modules/attendance/offline/db");
+      if (
+        (await hasPendingForOwner(user.id)) &&
+        !window.confirm(
+          "Unsynced attendance will remain on this device and cannot be synchronized by another account. Sign out anyway?",
+        )
+      )
+        return;
+    }
     setLogoutPending(true);
     try {
       await logout();
+      if (user) {
+        const { suspendOfflineLease } =
+          await import("@/modules/attendance/offline/db");
+        await suspendOfflineLease(user.id);
+      }
       router.replace("/login");
     } catch {
       setLogoutPending(false);
@@ -137,6 +153,9 @@ export function AuthenticatedHome() {
         { current: true, href: "/", label: "System status" },
         ...(user.permissions.includes("workers.read")
           ? [{ href: "/workers", label: "Workers" }]
+          : []),
+        ...(user.permissions.includes("attendance.read")
+          ? [{ href: "/attendance", label: "Attendance" }]
           : []),
         ...(user.permissions.includes("farm_structure.read")
           ? [{ href: "/farm-structure", label: "Farm structure" }]

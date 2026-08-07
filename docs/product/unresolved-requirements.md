@@ -35,13 +35,12 @@ These questions require confirmation from accountable Koranco stakeholders. They
 
 ## Attendance
 
-- Is attendance daily presence, check-in/out, a shift, crew roll call, task assignment, or something else?
-- Who records, verifies, and corrects attendance?
-- Can a worker have multiple valid attendance records in one operational day?
-- Which statuses and exceptions exist?
-- Is attendance associated with a crew, supervisor, field/block, or activity?
+- The initial confirmed workflow is an online Supervisor-led roster for an explicit date. Managers and Supervisors may record and correct it; statuses are Present and Absent, with optional time-in/time-out for Present entries. No FarmUnit or biometric/location evidence is included.
+- Can distinct Worker rosters validly produce multiple attendance sessions on one operational date, and what business boundary distinguishes them?
+- Is future attendance associated with a crew, team, shift, supervisor, field/block, or activity?
 - What defines an operational day and timezone boundary?
-- Is any biometric, location, or other evidence genuinely required?
+- Are additional statuses or exception reasons required later?
+- Does Koranco require immutable Worker name/code snapshots on historical attendance, or is displaying current Worker-register identity correct?
 
 ## Harvest
 
@@ -63,17 +62,17 @@ These questions require confirmation from accountable Koranco stakeholders. They
 
 ## Offline operation
 
-- Which exact workflows and actions must work offline?
-- How long might a device remain disconnected?
+- Attendance capture is the only implemented offline workflow; corrections and all management functions remain online-only.
+- The initial offline authorization lease is 12 hours. Is that suitable after field testing?
 - Which devices, operating systems, and browser versions must be supported?
 - Are devices assigned or shared, and how is loss or theft handled?
 - Can multiple devices work on the same workers or blocks concurrently?
 - Which reference data is required offline, and how current must it be?
 - Can records be edited while offline after initial capture?
-- What happens when a user's access changes while their device is offline?
-- How long may a previously authenticated Supervisor field session continue offline?
+- Who may reconcile preserved work when its owner is disabled or permanently unavailable?
 - Which local operational data must be purged on logout or account change?
-- How should queued offline mutations retain their responsible application-user identity?
+- What physical custody, screen-lock, privacy, and managed-device practices apply to shared phones?
+- What retention periods apply to processed server operation IDs and confirmed local copies?
 
 ## Reporting and exports
 

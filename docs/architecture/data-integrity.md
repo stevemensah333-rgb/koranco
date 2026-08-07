@@ -29,6 +29,10 @@ Audit history complements rather than replaces a well-designed domain correction
 
 Operational master-data audit events are append-only at the PostgreSQL layer. They store actor, action, entity identity, server timestamp, request ID, and bounded before/after JSON snapshots. They are not replayed as an event store and remain separate from authentication security events.
 
+Online attendance uses draft/submitted state, optimistic versions for draft replacement and entry correction, and a row lock during submission. Repeated submission of the same session is safe. PostgreSQL rejects submitted sessions with the same date and Worker-population fingerprint and prevents deletion of a submitted session. This narrow duplicate rule avoids asserting the still-unconfirmed one-session-per-day boundary; see ADR-007.
+
+Offline attendance adds a durable processed-operation record with a globally unique operation UUID, original actor, target session, payload version, bounded result, and processing time. An advisory transaction lock serializes identical concurrent operation IDs. A same-actor replay reconciles from the stored result; cross-actor replay is rejected. This transport idempotency is separate from the submitted-roster fingerprint and invokes the same attendance transaction rules; see ADR-008.
+
 ## Migration discipline
 
 - Make every schema change through Alembic and review generated migrations.

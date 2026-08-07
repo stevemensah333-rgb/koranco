@@ -27,6 +27,9 @@ class Permission(StrEnum):
     FARM_STRUCTURE_UPDATE = "farm_structure.update"
     FARM_STRUCTURE_DEACTIVATE = "farm_structure.deactivate"
     OPERATIONAL_AUDIT_READ = "operational_audit.read"
+    ATTENDANCE_READ = "attendance.read"
+    ATTENDANCE_RECORD = "attendance.record"
+    ATTENDANCE_CORRECT = "attendance.correct"
 
 
 ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
@@ -36,6 +39,9 @@ ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
             Permission.SYSTEM_STATUS_READ,
             Permission.WORKERS_READ,
             Permission.FARM_STRUCTURE_READ,
+            Permission.ATTENDANCE_READ,
+            Permission.ATTENDANCE_RECORD,
+            Permission.ATTENDANCE_CORRECT,
         }
     ),
     Role.WORKER: frozenset({Permission.SYSTEM_STATUS_READ}),
