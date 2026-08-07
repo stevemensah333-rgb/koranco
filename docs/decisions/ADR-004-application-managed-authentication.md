@@ -26,7 +26,7 @@ State-changing cookie-authenticated requests require both an explicitly trusted 
 - Koranco must operate credential provisioning, password recovery, session cleanup, monitoring, and database protection.
 - No public registration or email recovery exists. The first user is created through an intentional one-time command.
 - Account status is checked on every authenticated request; a disabled account's existing sessions are rejected and revoked when next used.
-- Permission definitions are centralized, but Koranco roles remain unresolved.
+- Permission definitions are centralized; the later approved fixed-role mapping is recorded in ADR-005.
 - Future offline field behavior cannot assume an online session indefinitely and requires a separate approved policy.
 
 ## Reconsideration conditions

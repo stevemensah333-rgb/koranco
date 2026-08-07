@@ -13,3 +13,5 @@ class AuthenticatedUserResponse(BaseModel):
     login_identifier: str
     display_name: str
     permissions: list[str]
+    role: str
+    password_change_required: bool

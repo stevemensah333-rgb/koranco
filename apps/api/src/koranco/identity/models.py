@@ -14,6 +14,9 @@ class ApplicationUser(Base):
     __tablename__ = "application_users"
     __table_args__ = (
         CheckConstraint("status IN ('active', 'disabled')", name="ck_application_users_status"),
+        CheckConstraint(
+            "role IN ('manager', 'supervisor', 'worker')", name="ck_application_users_role"
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -21,6 +24,8 @@ class ApplicationUser(Base):
     display_name: Mapped[str] = mapped_column(String(120))
     password_hash: Mapped[str] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(16), default="active")
+    role: Mapped[str] = mapped_column(String(16))
+    password_change_required: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -38,7 +43,13 @@ class UserPermission(Base):
     __tablename__ = "application_user_permissions"
     __table_args__ = (
         CheckConstraint(
-            "permission IN ('system.status.read')", name="ck_user_permissions_known_permission"
+            "permission IN ('system.status.read', 'users.read', 'users.create', 'users.update', "
+            "'users.disable', 'users.reactivate', 'roles.assign', 'sessions.read', "
+            "'sessions.revoke', 'security_events.read', 'workers.read', 'workers.create', "
+            "'workers.update', 'workers.deactivate', 'farm_structure.read', "
+            "'farm_structure.create', 'farm_structure.update', "
+            "'farm_structure.deactivate', 'operational_audit.read')",
+            name="ck_user_permissions_known_permission",
         ),
     )
 
@@ -73,6 +84,9 @@ class SecurityEvent(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     event_type: Mapped[str] = mapped_column(String(64), index=True)
     user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("application_users.id", ondelete="RESTRICT")
+    )
+    subject_user_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("application_users.id", ondelete="RESTRICT")
     )
     request_id: Mapped[str | None] = mapped_column(String(128))

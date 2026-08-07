@@ -12,31 +12,26 @@ These questions require confirmation from accountable Koranco stakeholders. They
 
 ## Users and permissions
 
-- Which people will use the system, and what responsibilities do they perform?
 - What may each confirmed user category view, create, correct, approve, export, and administer?
 - Must access be scoped by farm, field, team, department, or another boundary?
-- Who creates, disables, and recovers user accounts?
 - Are devices or user accounts shared today?
 - How should seasonal, inactive, and departing users be handled?
-- Who is authorized to provision, disable, re-enable, recover, and assign permissions to application users?
-- What confirmed Koranco roles group the centralized application permissions?
-- Is the application-managed credential model acceptable to Koranco's operational/security owner?
+- Which future operational permissions should Manager and Supervisor receive for each approved domain?
+- Who performs the documented emergency operator recovery procedure and approves its use?
 
 ## Worker register
 
-- What constitutes a worker, and which attributes are operationally required?
 - Are there existing authoritative worker identifiers?
 - Which worker categories are recognized?
 - How are duplicates identified and resolved?
 - Which personal data is necessary, who may access it, and how long is it retained?
-- Can records be merged, archived, or reactivated, and under whose authority?
+- Must duplicate worker records ever be merged, and under whose authority?
 
 ## Fields and blocks
 
 - Are “field” and “block” distinct concepts at Koranco?
 - Which identifiers, statuses, areas, units, varieties, and tenure details are required?
 - Is map geometry or GPS required, or is register data sufficient?
-- Which historical changes must remain visible?
 
 ## Attendance
 
@@ -76,7 +71,7 @@ These questions require confirmation from accountable Koranco stakeholders. They
 - Which reference data is required offline, and how current must it be?
 - Can records be edited while offline after initial capture?
 - What happens when a user's access changes while their device is offline?
-- May an authenticated field session continue while offline, and for how long?
+- How long may a previously authenticated Supervisor field session continue offline?
 - Which local operational data must be purged on logout or account change?
 - How should queued offline mutations retain their responsible application-user identity?
 

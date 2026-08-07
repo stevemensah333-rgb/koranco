@@ -27,6 +27,8 @@ Important operational facts must not be silently overwritten or deleted. Correct
 
 Audit history complements rather than replaces a well-designed domain correction model. Routine application paths must not edit or delete audit records.
 
+Operational master-data audit events are append-only at the PostgreSQL layer. They store actor, action, entity identity, server timestamp, request ID, and bounded before/after JSON snapshots. They are not replayed as an event store and remain separate from authentication security events.
+
 ## Migration discipline
 
 - Make every schema change through Alembic and review generated migrations.
@@ -35,4 +37,3 @@ Audit history complements rather than replaces a well-designed domain correction
 - Define data backfills, verification, failure handling, and rollback/recovery before risky changes.
 - Take and verify an appropriate backup before destructive production migrations.
 - Never rewrite an already-applied migration to disguise later changes.
-

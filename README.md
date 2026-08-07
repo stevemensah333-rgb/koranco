@@ -4,7 +4,7 @@ Koranco is a production-oriented system for digitizing priority operations at Ko
 
 ## Project status
 
-The repository contains the runnable technical foundation, visual system, and application-managed authentication foundation. It includes a protected system-status area, PostgreSQL-backed sessions, centralized foundation authorization, reusable accessible UI primitives, configuration, quality tooling, and CI. Farm business features have not started.
+The repository contains the runnable technical foundation, visual system, application-managed authentication, confirmed role/account administration, Worker register, Farm Structure register, and append-only operational audit foundation. Attendance, harvest, reporting, offline synchronization, and other later workflows have not started.
 
 ## Architecture
 
@@ -69,7 +69,7 @@ pnpm dev
 
 The web application is available at `http://localhost:3000`. The API health and readiness endpoints are at `http://localhost:8000/api/v1/health` and `/api/v1/readiness`. Interactive API documentation is available at `/docs` in development and test, and disabled in production.
 
-Before the first login, create the one-time bootstrap user after migrations:
+Before the first login, create the one-time bootstrap Manager after migrations:
 
 ```sh
 cd apps/api

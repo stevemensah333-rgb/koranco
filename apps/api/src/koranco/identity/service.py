@@ -36,12 +36,17 @@ class NewSession:
 
 
 def record_security_event(
-    session: Session, event_type: str, user: ApplicationUser | None, request_id: str | None
+    session: Session,
+    event_type: str,
+    user: ApplicationUser | None,
+    request_id: str | None,
+    subject: ApplicationUser | None = None,
 ) -> None:
     session.add(
         SecurityEvent(
             event_type=event_type,
             user_id=user.id if user else None,
+            subject_user_id=subject.id if subject else None,
             request_id=request_id,
         )
     )

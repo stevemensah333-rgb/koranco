@@ -14,10 +14,9 @@ import {
   type AuthenticatedUser,
   getCurrentSession,
   getProtectedSystemStatus,
+  changeOwnPassword,
   logout,
 } from "@/lib/api/auth";
-
-const navigation = [{ current: true, href: "/", label: "System status" }];
 
 export function AuthenticatedHome() {
   const router = useRouter();
@@ -32,6 +31,10 @@ export function AuthenticatedHome() {
     getCurrentSession(controller.signal)
       .then((currentUser) => {
         setUser(currentUser);
+        if (currentUser.password_change_required) {
+          setStatus("available");
+          return { status: "password-change" };
+        }
         return getProtectedSystemStatus(controller.signal);
       })
       .then(() => setStatus("available"))
@@ -71,9 +74,80 @@ export function AuthenticatedHome() {
     );
   }
 
+  if (user.password_change_required) {
+    return (
+      <main className="auth-loading">
+        <form
+          className="login-form"
+          onSubmit={async (event) => {
+            event.preventDefault();
+            const data = new FormData(event.currentTarget);
+            try {
+              await changeOwnPassword(
+                String(data.get("current_password") ?? ""),
+                String(data.get("new_password") ?? ""),
+              );
+              setUser({ ...user, password_change_required: false });
+              setStatus("loading");
+              await getProtectedSystemStatus();
+              setStatus("available");
+            } catch {
+              setStatus("unavailable");
+            }
+          }}
+        >
+          <h1 className="section-heading">Choose a new password</h1>
+          <p>
+            Your temporary or reset credential must be replaced before
+            continuing.
+          </p>
+          <label>
+            Current password
+            <input
+              className="text-input"
+              type="password"
+              name="current_password"
+              autoComplete="current-password"
+            />
+          </label>
+          <label>
+            New password
+            <input
+              className="text-input"
+              type="password"
+              name="new_password"
+              autoComplete="new-password"
+            />
+          </label>
+          {status === "unavailable" ? (
+            <Alert title="Password not changed" tone="error">
+              Check the current password and use at least 12 characters for the
+              new password.
+            </Alert>
+          ) : null}
+          <Button type="submit">Change password</Button>
+        </form>
+      </main>
+    );
+  }
+
   return (
     <ManagementShell
-      navigation={navigation}
+      navigation={[
+        { current: true, href: "/", label: "System status" },
+        ...(user.permissions.includes("workers.read")
+          ? [{ href: "/workers", label: "Workers" }]
+          : []),
+        ...(user.permissions.includes("farm_structure.read")
+          ? [{ href: "/farm-structure", label: "Farm structure" }]
+          : []),
+        ...(user.permissions.includes("users.read")
+          ? [
+              { href: "/admin/users", label: "Users" },
+              { href: "/admin/security-events", label: "Security events" },
+            ]
+          : []),
+      ]}
       utility={
         <div className="session-utility">
           <span className="session-identity">{user.display_name}</span>

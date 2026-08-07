@@ -32,6 +32,8 @@ def user_response(user: ApplicationUser) -> AuthenticatedUserResponse:
         login_identifier=user.login_identifier,
         display_name=user.display_name,
         permissions=sorted(item.permission for item in user.permissions),
+        role=user.role,
+        password_change_required=user.password_change_required,
     )
 
 

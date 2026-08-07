@@ -41,3 +41,6 @@ Success means that confirmed operational work is captured accurately, survives a
 
 Business workflows and definitions remain subject to Koranco validation. Unknown fields, rules, roles, metrics, hierarchies, and retention requirements are tracked in [unresolved requirements](unresolved-requirements.md), not filled in by analogy with other farm or HR products.
 
+## Confirmed access model
+
+The role hierarchy is Manager, Supervisor, and Worker. Managers administer application accounts and security access. Supervisors are operational users without system administration. Workers have no administration and require an application account only if Koranco explicitly needs future self-service. These application identities remain separate from the farm-worker register.

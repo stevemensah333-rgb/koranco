@@ -84,6 +84,8 @@ def require_csrf(request: Request, auth: Authenticated) -> AuthContext:
 
 def require_permission(permission: Permission) -> Callable[[AuthContext], AuthContext]:
     def dependency(auth: Authenticated) -> AuthContext:
+        if auth.user.password_change_required:
+            raise HTTPException(status_code=403, detail="Password change required")
         granted = {item.permission for item in auth.user.permissions}
         if permission not in granted:
             raise HTTPException(status_code=403, detail="Permission denied")

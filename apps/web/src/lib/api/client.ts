@@ -23,7 +23,18 @@ export async function apiRequest<ResponseBody>(
       ...options.headers,
     },
   });
-  if (!response.ok) throw new ApiError("API request failed", response.status);
+  if (!response.ok) {
+    let message = "API request failed";
+    try {
+      const payload = (await response.json()) as {
+        error?: { message?: string };
+      };
+      if (payload.error?.message) message = payload.error.message;
+    } catch {
+      // Keep the stable fallback when an intermediary returns a non-JSON error.
+    }
+    throw new ApiError(message, response.status);
+  }
   if (response.status === 204) return undefined as ResponseBody;
   return (await response.json()) as ResponseBody;
 }

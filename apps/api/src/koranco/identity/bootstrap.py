@@ -7,7 +7,7 @@ from sqlalchemy import func, select
 from koranco.db.session import SessionFactory
 from koranco.identity.models import ApplicationUser, UserPermission
 from koranco.identity.passwords import PasswordPolicyError, hash_password
-from koranco.identity.permissions import Permission
+from koranco.identity.permissions import Role, permissions_for_role
 from koranco.identity.security import normalize_login_identifier
 from koranco.identity.service import record_security_event
 
@@ -43,8 +43,12 @@ def bootstrap(login: str, display_name: str, password: str, confirmed: bool) -> 
             display_name=clean_display_name,
             password_hash=password_hash,
             status="active",
+            role=Role.MANAGER,
         )
-        user.permissions.append(UserPermission(permission=Permission.SYSTEM_STATUS_READ))
+        user.permissions.extend(
+            UserPermission(permission=permission)
+            for permission in permissions_for_role(Role.MANAGER)
+        )
         session.add(user)
         session.flush()
         record_security_event(session, "bootstrap_user_created", user, request_id=None)

@@ -4,7 +4,7 @@
 
 Browsers, devices, networks, imported files, and all request data are untrusted. The backend is the enforcement boundary for authentication, authorization, validation, and business rules. PostgreSQL is authoritative, but database access and migrations also require controlled credentials and review.
 
-Authentication is application-managed with PostgreSQL-backed sessions as decided in [ADR-004](../decisions/ADR-004-application-managed-authentication.md). Detailed credential, session, CSRF, bootstrap, and permission behavior is documented in [authentication and authorization](authentication.md). Koranco's organizational roles and account-administration ownership remain unresolved.
+Authentication is application-managed with PostgreSQL-backed sessions as decided in [ADR-004](../decisions/ADR-004-application-managed-authentication.md). Fixed roles and centralized permission mapping are decided in [ADR-005](../decisions/ADR-005-fixed-roles-and-permissions.md). Detailed credential, session, CSRF, bootstrap, recovery, and permission behavior is documented in [authentication and authorization](authentication.md).
 
 ## Authorization
 

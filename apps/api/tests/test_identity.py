@@ -16,7 +16,7 @@ from koranco.identity.models import (
     UserPermission,
 )
 from koranco.identity.passwords import hash_password, password_hash_needs_upgrade, verify_password
-from koranco.identity.permissions import Permission
+from koranco.identity.permissions import Role, permissions_for_role
 from koranco.identity.security import SESSION_COOKIE, hash_token, normalize_login_identifier
 from koranco.main import app
 
@@ -39,6 +39,7 @@ def create_user(
     password: str = "a long example password",
     status: str = "active",
     permission: bool = True,
+    role: Role = Role.SUPERVISOR,
 ) -> ApplicationUser:
     with SessionFactory.begin() as session:
         user = ApplicationUser(
@@ -46,9 +47,12 @@ def create_user(
             display_name="Example Operator",
             password_hash=hash_password(password),
             status=status,
+            role=role,
         )
         if permission:
-            user.permissions.append(UserPermission(permission=Permission.SYSTEM_STATUS_READ))
+            user.permissions.extend(
+                UserPermission(permission=value) for value in permissions_for_role(role)
+            )
         session.add(user)
         session.flush()
         session.expunge(user)
@@ -101,7 +105,8 @@ def test_successful_login_sets_hardened_cookie_and_never_exposes_hash() -> None:
 
     assert response.status_code == 200
     assert response.json()["login_identifier"] == "operator"
-    assert "password" not in response.text
+    assert "password_hash" not in response.text
+    assert "a long example password" not in response.text
     session_cookie = next(
         value
         for value in response.headers.get_list("set-cookie")
@@ -313,5 +318,6 @@ def test_database_rejects_duplicate_login_identifiers() -> None:
                 display_name="Duplicate",
                 password_hash=hash_password("a different long password"),
                 status="active",
+                role=Role.SUPERVISOR,
             )
         )
