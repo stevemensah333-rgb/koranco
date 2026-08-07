@@ -1,0 +1,19 @@
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: koranco_dev
+      POSTGRES_PASSWORD: koranco_dev
+      POSTGRES_USER: koranco_dev
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U koranco_dev -d koranco_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "5432:5432"
+    volumes:
+      - koranco-postgres:/var/lib/postgresql/data
+
+volumes:
+  koranco-postgres:

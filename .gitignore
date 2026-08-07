@@ -23,6 +23,7 @@ out/
 coverage/
 playwright-report/
 test-results/
+*.tsbuildinfo
 
 # Python (future API application)
 __pycache__/
@@ -37,4 +38,3 @@ venv/
 dist/
 build/
 *.egg-info/
-

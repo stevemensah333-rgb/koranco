@@ -1,0 +1,29 @@
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from koranco.api import router
+from koranco.common.errors import install_error_handlers
+from koranco.common.logging import configure_logging
+from koranco.common.request_id import RequestIdMiddleware
+from koranco.config.settings import get_settings
+
+settings = get_settings()
+configure_logging(settings.log_level)
+
+app = FastAPI(
+    title="Koranco Farms API",
+    version="0.1.0",
+    docs_url="/docs" if settings.expose_api_docs else None,
+    redoc_url=None,
+    openapi_url="/openapi.json" if settings.expose_api_docs else None,
+)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Accept", "Content-Type", "X-Request-ID"],
+)
+app.add_middleware(RequestIdMiddleware)
+install_error_handlers(app)
+app.include_router(router)

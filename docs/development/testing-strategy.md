@@ -25,3 +25,4 @@ Bugs should receive focused regression tests when practical. Test data must be c
 
 Before considering work complete, run the applicable formatter, linter, static type checker, unit/integration tests, production build, and critical E2E tests. CI should enforce these checks once the applications exist; exact tooling belongs to the scaffolding phase.
 
+The foundation uses Ruff as the sole Python formatter/linter and Mypy in strict mode as the Python type checker. The frontend uses Prettier, ESLint, strict TypeScript, and Vitest. GitHub Actions runs formatting checks, linting, type checking, tests, migrations against PostgreSQL 17, and the frontend production build on pushes to `main` and pull requests.

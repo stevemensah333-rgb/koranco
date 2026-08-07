@@ -16,6 +16,8 @@ The PWA will provide field and management experiences from one frontend codebase
 
 The FastAPI backend is the security and business-rule boundary. It validates requests, authorizes operations, coordinates domain logic and transactions, records relevant audit history, and exposes deliberate API contracts. PostgreSQL is authoritative.
 
+The foundation exposes versioned operational endpoints under `/api/v1`, including lightweight health and database-backed readiness checks. These endpoints carry no farm data. Development CORS is explicit, API documentation is disabled in production, and backend requests receive a validated correlation identifier for operational logs.
+
 ## Request and data flow
 
 For connected operations, the frontend sends an authenticated request to the API. The API validates and authorizes it, executes confirmed domain rules within an appropriate transaction, persists the result, and returns an explicit response.
@@ -31,4 +33,3 @@ Module boundaries should remain explicit so responsibilities can evolve. A servi
 ## Expansion philosophy
 
 Expand from validated workflows in small vertical slices. Prefer simple infrastructure and established framework capabilities. New modules, integrations, asynchronous processing, native applications, or AI/ML require concrete evidence and an approved product need; technological possibility is not sufficient.
-
