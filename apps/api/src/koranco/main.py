@@ -6,6 +6,7 @@ from koranco.common.errors import install_error_handlers
 from koranco.common.logging import configure_logging
 from koranco.common.request_id import RequestIdMiddleware
 from koranco.config.settings import get_settings
+from koranco.identity.routes import router as identity_router
 
 settings = get_settings()
 configure_logging(settings.log_level)
@@ -27,3 +28,4 @@ app.add_middleware(
 app.add_middleware(RequestIdMiddleware)
 install_error_handlers(app)
 app.include_router(router)
+app.include_router(identity_router)

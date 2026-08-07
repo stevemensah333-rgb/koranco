@@ -18,6 +18,9 @@ These questions require confirmation from accountable Koranco stakeholders. They
 - Who creates, disables, and recovers user accounts?
 - Are devices or user accounts shared today?
 - How should seasonal, inactive, and departing users be handled?
+- Who is authorized to provision, disable, re-enable, recover, and assign permissions to application users?
+- What confirmed Koranco roles group the centralized application permissions?
+- Is the application-managed credential model acceptable to Koranco's operational/security owner?
 
 ## Worker register
 
@@ -73,6 +76,9 @@ These questions require confirmation from accountable Koranco stakeholders. They
 - Which reference data is required offline, and how current must it be?
 - Can records be edited while offline after initial capture?
 - What happens when a user's access changes while their device is offline?
+- May an authenticated field session continue while offline, and for how long?
+- Which local operational data must be purged on logout or account change?
+- How should queued offline mutations retain their responsible application-user identity?
 
 ## Reporting and exports
 
@@ -91,4 +97,3 @@ These questions require confirmation from accountable Koranco stakeholders. They
 - What backup retention, restore-testing, and incident-response policies apply?
 - Which Ghanaian data-protection, employment, exporter, or contractual obligations have been assessed?
 - Who owns product decisions and approves workflow definitions?
-

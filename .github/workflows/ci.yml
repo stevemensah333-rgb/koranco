@@ -56,6 +56,7 @@ jobs:
       KORANCO_ENVIRONMENT: test
       KORANCO_DATABASE_URL: postgresql+psycopg://koranco_test:koranco_test@localhost:5432/koranco_test
       KORANCO_CORS_ORIGINS: '[]'
+      KORANCO_CSRF_TRUSTED_ORIGINS: '["http://test"]'
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6

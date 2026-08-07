@@ -4,7 +4,7 @@
 
 Browsers, devices, networks, imported files, and all request data are untrusted. The backend is the enforcement boundary for authentication, authorization, validation, and business rules. PostgreSQL is authoritative, but database access and migrations also require controlled credentials and review.
 
-The precise authentication provider is unresolved. The eventual mechanism must use established security libraries and protocols rather than custom cryptography.
+Authentication is application-managed with PostgreSQL-backed sessions as decided in [ADR-004](../decisions/ADR-004-application-managed-authentication.md). Detailed credential, session, CSRF, bootstrap, and permission behavior is documented in [authentication and authorization](authentication.md). Koranco's organizational roles and account-administration ownership remain unresolved.
 
 ## Authorization
 
@@ -30,4 +30,3 @@ Audit history establishes who performed significant business or administrative a
 ## Legal and governance consideration
 
 The project must consider Ghana's Data Protection Act, 2012 (Act 843), particularly when defining worker-data collection, access, retention, exports, backups, and incident procedures. This document does not claim that a legal or compliance assessment has been completed. Koranco should identify the responsible adviser or decision owner before personal-data behavior is finalized.
-

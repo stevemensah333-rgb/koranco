@@ -17,6 +17,7 @@ def test_non_postgresql_database_is_rejected() -> None:
         Settings(
             environment="test",
             database_url="sqlite:///local.db",
+            csrf_trusted_origins=["http://test"],
             _env_file=None,
         )
 
@@ -27,6 +28,7 @@ def test_wildcard_cors_is_rejected() -> None:
             environment="test",
             database_url="postgresql+psycopg://localhost/koranco",
             cors_origins=["*"],
+            csrf_trusted_origins=["http://test"],
             _env_file=None,
         )
 
@@ -35,7 +37,19 @@ def test_production_disables_api_documentation() -> None:
     settings = Settings(
         environment="production",
         database_url="postgresql+psycopg://localhost/koranco",
+        csrf_trusted_origins=["https://koranco.example"],
         _env_file=None,
     )
 
     assert settings.expose_api_docs is False
+    assert settings.secure_cookies is True
+
+
+def test_csrf_origins_must_be_explicit() -> None:
+    with pytest.raises(ValidationError, match="explicit origins"):
+        Settings(
+            environment="production",
+            database_url="postgresql+psycopg://localhost/koranco",
+            csrf_trusted_origins=["*"],
+            _env_file=None,
+        )
