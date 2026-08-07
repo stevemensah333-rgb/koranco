@@ -1,0 +1,40 @@
+# Operating-system metadata
+.DS_Store
+
+# Local editor settings
+.idea/
+.vscode/
+*.swp
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+
+# Logs and temporary files
+*.log
+tmp/
+temp/
+
+# JavaScript/TypeScript (future web application)
+node_modules/
+.next/
+out/
+coverage/
+playwright-report/
+test-results/
+
+# Python (future API application)
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+
