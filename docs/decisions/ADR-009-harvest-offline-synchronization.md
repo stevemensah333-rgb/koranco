@@ -2,6 +2,14 @@
 
 - Status: Accepted
 
+> **Status note (2026-08-08):** The proposal below has since been **accepted and
+> implemented**. Offline Harvest draft capture and first submission exist in
+> product code (migration `0008_harvest_offline_sync`, `harvest/sync.py`, the
+> Harvest-specific local Dexie stores, and `POST /api/v1/harvest-records/sync`).
+> The historical proposal text below is preserved for context; it is no longer a
+> forward-looking proposal. Open confirmation items listed at the end remain
+> open and are not inferred as answered.
+
 **Human-approved policy (2026-08-08):**
 
 - Offline Harvest is required for field operation.

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { ManagementShell } from "@/components/shells/management-shell";
+import { managementNavigation } from "@/components/shells/management-navigation";
 import { Alert } from "@/components/ui/alert";
 import { LoadingIndicator } from "@/components/ui/loading-indicator";
 import { getCurrentSession, type AuthenticatedUser } from "@/lib/api/auth";
@@ -46,15 +47,10 @@ export function AdminShell({
     );
   return (
     <ManagementShell
-      navigation={[
-        { href: "/", label: "System status" },
-        { href: "/admin/users", label: "Users", current: current === "users" },
-        {
-          href: "/admin/security-events",
-          label: "Security events",
-          current: current === "events",
-        },
-      ]}
+      navigation={managementNavigation(
+        user,
+        current === "users" ? "/admin/users" : "/admin/security-events",
+      )}
     >
       {children}
     </ManagementShell>

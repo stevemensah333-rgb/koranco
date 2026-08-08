@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { ManagementShell } from "@/components/shells/management-shell";
+import { managementNavigation } from "@/components/shells/management-navigation";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { LoadingIndicator } from "@/components/ui/loading-indicator";
@@ -280,22 +281,8 @@ export function domainNavigation(
   current: "workers" | "farm",
   user: AuthenticatedUser | null,
 ) {
-  return [
-    { href: "/", label: "System status" },
-    ...(user?.permissions.includes("workers.read")
-      ? [{ href: "/workers", label: "Workers", current: current === "workers" }]
-      : []),
-    ...(user?.permissions.includes("farm_structure.read")
-      ? [
-          {
-            href: "/farm-structure",
-            label: "Farm structure",
-            current: current === "farm",
-          },
-        ]
-      : []),
-    ...(user?.permissions.includes("users.read")
-      ? [{ href: "/admin/users", label: "Users" }]
-      : []),
-  ];
+  return managementNavigation(
+    user,
+    current === "workers" ? "/workers" : "/farm-structure",
+  );
 }

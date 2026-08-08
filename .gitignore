@@ -16,6 +16,9 @@
 tmp/
 temp/
 
+# Operational backup drill artifacts
+.drill-backups/
+
 # JavaScript/TypeScript (future web application)
 node_modules/
 .next/

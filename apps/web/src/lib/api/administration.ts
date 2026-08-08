@@ -16,6 +16,7 @@ export type SecurityEvent = {
   event_type: string;
   actor_user_id: string | null;
   subject_user_id: string | null;
+  details: Record<string, unknown> | null;
   occurred_at: string;
 };
 

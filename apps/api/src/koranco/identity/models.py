@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Index, String, Text, func
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from koranco.db.base import Base
@@ -49,7 +50,9 @@ class UserPermission(Base):
             "'workers.update', 'workers.deactivate', 'farm_structure.read', "
             "'farm_structure.create', 'farm_structure.update', "
             "'farm_structure.deactivate', 'operational_audit.read', "
-            "'attendance.read', 'attendance.record', 'attendance.correct')",
+            "'attendance.read', 'attendance.record', 'attendance.correct', "
+            "'harvest.read', 'harvest.record', 'harvest.correct', "
+            "'reports.read', 'exports.create')",
             name="ck_user_permissions_known_permission",
         ),
     )
@@ -91,6 +94,7 @@ class SecurityEvent(Base):
         UUID(as_uuid=True), ForeignKey("application_users.id", ondelete="RESTRICT")
     )
     request_id: Mapped[str | None] = mapped_column(String(128))
+    details: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     occurred_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False, index=True
     )

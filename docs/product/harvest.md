@@ -33,8 +33,13 @@ Managers and Supervisors receive `harvest.read`, `harvest.record`, and `harvest.
 
 Harvest is online-only in this phase. It writes nothing to IndexedDB, localStorage, the attendance outbox, or the attendance sync API. A later offline phase should reuse the proven owner-scoped storage, stable operation and aggregate UUIDs, payload versions, durable outbox states, actor-bound replay, server idempotency, and explicit result categories. That phase should extract shared primitives deliberately rather than copy the attendance subsystem.
 
-## Proposed future offline capture (not yet implemented)
+## Offline capture (implemented) — historical proposal
 
-A concrete design for offline Harvest capture is **proposed but not implemented** and requires explicit Koranco approval before any code is written: see [ADR-009](../decisions/ADR-009-harvest-offline-synchronization.md) and [Harvest offline synchronization (proposed design)](../architecture/harvest-offline-sync.md). Nothing described below exists in the current system; the paragraph above remains the implemented behavior.
+> **Status note (2026-08-08):** Offline Harvest draft capture and first
+> submission are now **implemented** under [ADR-009](../decisions/ADR-009-harvest-offline-synchronization.md).
+> The text below is the historical proposal preserved for context; it is no
+> longer a forward-looking proposal.
+
+The original proposal was: a concrete design for offline Harvest capture **proposed but not implemented** requiring explicit Koranco approval before any code was written (see [ADR-009](../decisions/ADR-009-harvest-offline-synchronization.md) and [Harvest offline synchronization (proposed design)](../architecture/harvest-offline-sync.md)).
 
 The proposal would make **only new draft capture and first submission** available offline. Submitted-record correction stays online-only, along with Farm Structure administration, account administration, reporting, and audit browsing. It keys transport idempotency on a stable operation UUID and record equivalence on the client-generated HarvestRecord UUID — deliberately **not** on FarmUnit + date, because multiple legitimate harvest events may share one FarmUnit and date. Every synced payload is fully re-validated by the API using the existing FarmUnit, quantity/unit, and lifecycle rules, and conflicts (inactive FarmUnit, ambiguous Field, stale version, unsupported unit/payload, revoked permission, cross-actor replay) resolve to explicit outcomes with no last-write-wins. Offline submission would be labelled "saved on this device, waiting to sync," never official submission.

@@ -4,7 +4,7 @@ Koranco is a production-oriented system for digitizing priority operations at Ko
 
 ## Project status
 
-The repository contains the runnable technical foundation, visual system, application-managed authentication, confirmed role/account administration, Worker register, Farm Structure register, production-oriented online/offline attendance capture, and append-only operational audit foundation. Harvest, reporting, and other later workflows have not started.
+The repository contains the runnable technical foundation, visual system, application-managed authentication, confirmed role/account administration, Worker register, Farm Structure register, production-oriented online/offline attendance capture, online and offline Harvest, append-only operational audit foundation, an operational reporting and management overview phase (Overview, Attendance report, Harvest report, and Manager-only CSV export), and a Backup, Recovery, and Production Operations phase (provisional backup policy, portable `pg_dump`/`pg_restore` tooling, a restore drill, migration/incident/production-readiness runbooks, and CI backup-restore verification). Deferred workflows (inventory, payroll, full traceability, AI/ML) remain unstarted.
 
 ## Architecture
 
@@ -105,6 +105,7 @@ The guarded setup creates/resets only `koranco_e2e`; never point the E2E seeder 
 
 - [Product scope](docs/product/product-scope.md)
 - [Online attendance](docs/product/attendance.md)
+- [Reporting and operational overview](docs/product/reporting.md)
 - [Unresolved requirements](docs/product/unresolved-requirements.md)
 - [Architecture overview](docs/architecture/overview.md)
 - [Domain boundaries](docs/architecture/domain-boundaries.md)
@@ -117,5 +118,9 @@ The guarded setup creates/resets only `koranco_e2e`; never point the E2E seeder 
 - [Design system](docs/design/system.md)
 - [Testing strategy](docs/development/testing-strategy.md)
 - [Handover principles](docs/operations/handover-principles.md)
+- [Backup and recovery](docs/operations/backup-and-recovery.md)
+- [Database migration operations](docs/operations/database-migrations.md)
+- [Incident response](docs/operations/incident-response.md)
+- [Production readiness](docs/operations/production-readiness.md)
 
 Repository-wide engineering instructions are in [AGENTS.md](AGENTS.md). Unknown Koranco workflows, fields, permissions, metrics, and policies must not be guessed; they remain documented as unresolved until validated with an accountable Koranco stakeholder.

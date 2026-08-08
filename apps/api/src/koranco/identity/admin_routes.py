@@ -199,6 +199,7 @@ def list_security_events(
                 event_type=e.event_type,
                 actor_user_id=e.user_id,
                 subject_user_id=e.subject_user_id,
+                details=e.details,
                 occurred_at=e.occurred_at,
             )
             for e in events

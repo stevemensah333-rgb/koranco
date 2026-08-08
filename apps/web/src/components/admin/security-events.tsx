@@ -9,6 +9,19 @@ import {
   type SecurityEvent,
 } from "@/lib/api/administration";
 
+function formatEventDetails(details: Record<string, unknown> | null) {
+  if (!details) return "—";
+  const type = details.export_type;
+  if (type) {
+    const rows =
+      typeof details.row_count === "number"
+        ? ` · ${details.row_count} rows`
+        : "";
+    return `Export ${type}${rows}`;
+  }
+  return "—";
+}
+
 export function SecurityEventsAdmin() {
   const [events, setEvents] = useState<SecurityEvent[] | null>(null);
   const [failed, setFailed] = useState(false);
@@ -43,6 +56,7 @@ export function SecurityEventsAdmin() {
                   <th>Event</th>
                   <th>Actor</th>
                   <th>Subject</th>
+                  <th>Details</th>
                 </tr>
               </thead>
               <tbody>
@@ -52,6 +66,7 @@ export function SecurityEventsAdmin() {
                     <td>{event.event_type.replaceAll("_", " ")}</td>
                     <td>{event.actor_user_id ?? "System"}</td>
                     <td>{event.subject_user_id ?? "—"}</td>
+                    <td>{formatEventDetails(event.details)}</td>
                   </tr>
                 ))}
               </tbody>
