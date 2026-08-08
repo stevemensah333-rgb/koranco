@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     session_ttl_hours: int = Field(default=12, ge=1, le=168)
     login_failure_limit: int = Field(default=5, ge=2, le=20)
     login_failure_window_minutes: int = Field(default=15, ge=1, le=60)
+    cookie_samesite: Literal["lax", "strict", "none"] = "lax"
 
     @field_validator("database_url")
     @classmethod

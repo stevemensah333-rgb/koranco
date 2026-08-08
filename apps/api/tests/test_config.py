@@ -43,6 +43,27 @@ def test_production_disables_api_documentation() -> None:
 
     assert settings.expose_api_docs is False
     assert settings.secure_cookies is True
+    assert settings.cookie_samesite == "lax"
+
+
+def test_cookie_samesite_can_be_configured() -> None:
+    settings = Settings(
+        environment="production",
+        database_url="postgresql+psycopg://localhost/koranco",
+        csrf_trusted_origins=["https://koranco.example"],
+        cookie_samesite="none",
+        _env_file=None,
+    )
+    assert settings.cookie_samesite == "none"
+
+    settings_strict = Settings(
+        environment="production",
+        database_url="postgresql+psycopg://localhost/koranco",
+        csrf_trusted_origins=["https://koranco.example"],
+        cookie_samesite="strict",
+        _env_file=None,
+    )
+    assert settings_strict.cookie_samesite == "strict"
 
 
 def test_csrf_origins_must_be_explicit() -> None:
