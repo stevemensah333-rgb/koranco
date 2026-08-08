@@ -1,6 +1,10 @@
-# Harvest offline synchronization (proposed design)
+# Harvest offline synchronization
 
-> **Status: Proposed — not yet implemented.** This document specifies a *future* offline Harvest capture protocol. It describes behavior that does not exist in the codebase yet. Harvest is currently online-only; see `docs/product/harvest.md` and `docs/architecture/offline-sync.md`. Implementation must not begin until [ADR-009](../decisions/ADR-009-harvest-offline-synchronization.md) is accepted by an accountable Koranco decision owner and its open questions are resolved. This design is a companion to ADR-009: the ADR records the decision and rationale; this document is the detailed protocol and phased plan.
+> **Status: Implemented (2026-08-08).** This document specifies the shipped
+> protocol accepted in
+> [ADR-009](../decisions/ADR-009-harvest-offline-synchronization.md). The phased
+> plan is retained as implementation history; current behavior is summarized in
+> [offline field synchronization](offline-sync.md).
 
 ## Scope
 
@@ -99,7 +103,7 @@ Rule of thumb: shared code holds transport/plumbing; each domain owns its meanin
 
 Endpoint: `POST /api/v1/harvest-records/sync`, authorized by the existing `harvest.record` permission. Accepts exactly one `submit_harvest_snapshot` operation; validates it as untrusted input. HTTP 401 = auth required (pending); HTTP 403 = lacks permission (needs attention); semantic outcomes are HTTP 200 with explicit `result` (mirrors attendance so the client mapping is familiar).
 
-Backend table (new forward migration, proposed `0008_harvest_offline_sync`): `harvest_sync_operations` mirroring `attendance_sync_operations` — `operation_id` PK/unique, `actor_user_id` FK (RESTRICT), `harvest_record_id`, `payload_version`, `result` (checked), `result_message` (bounded), `request_id`, `created_at`, `processed_at`. Migration 0006 is **not** rewritten; `attendance_sync_operations` is **not** generalized. A shared processed-operation model is deferred until a third offline domain justifies it with evidence.
+Backend table (forward migration `0008_harvest_offline_sync`): `harvest_sync_operations` mirroring `attendance_sync_operations` — `operation_id` PK/unique, `actor_user_id` FK (RESTRICT), `harvest_record_id`, `payload_version`, `result` (checked), `result_message` (bounded), `request_id`, `created_at`, `processed_at`. Migration 0006 is **not** rewritten; `attendance_sync_operations` is **not** generalized. A shared processed-operation model is deferred until a third offline domain justifies it with evidence.
 
 ## 9. IndexedDB migration safety
 
@@ -138,9 +142,9 @@ Playwright (Chromium) against the isolated `koranco_e2e` database (global setup 
 
 Physical-device checklist analogous to `docs/operations/offline-attendance-field-test.md` (a new `docs/operations/offline-harvest-field-test.md` in Phase 4), because desktop automation cannot reproduce OS eviction, custody, low-memory termination, or field conditions.
 
-## 13. Phased implementation plan
+## 13. Completed implementation phases
 
-Each phase ends with the applicable formatter, linter, type checker, tests, and build green (Ruff + Mypy strict for API; Prettier + ESLint + strict TS + Vitest for web), per `docs/development/testing-strategy.md`.
+Each phase ended with the applicable formatter, linter, type checker, tests, and build green (Ruff + Mypy strict for API; Prettier + ESLint + strict TS + Vitest for web), per `docs/development/testing-strategy.md`.
 
 - **Phase 0 — Approval and confirmations (no code).** Koranco accepts ADR-009 and answers its open questions: is offline Harvest required and for which roles/blocks; are the two units confirmed; lease duration; retention for `harvest_sync_operations`; reconciliation authority for stranded queues; per-domain lease flag. Update ADR-009 status to Accepted or Rejected.
 - **Phase 1 — Backend sync endpoint + processed-operation table.** Alembic `0008_harvest_offline_sync` (`harvest_sync_operations`). Harvest sync ingestion service reusing `create_draft(record_id=...)` + `submit_record`, advisory-lock idempotency, cross-actor rejection, explicit result mapping. `POST /api/v1/harvest-records/sync` with `harvest.record` authorization. Backend integration tests for every §5 outcome. Decide the `harvest_record_id` FK nullability question here.

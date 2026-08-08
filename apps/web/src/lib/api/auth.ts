@@ -25,7 +25,8 @@ export function csrfHeaders(): Record<string, string> {
 async function preserveOfflineAuthorization(user: AuthenticatedUser) {
   if (
     typeof window !== "undefined" &&
-    user.permissions.includes("attendance.record")
+    (user.permissions.includes("attendance.record") ||
+      user.permissions.includes("harvest.record"))
   ) {
     const { recordOfflineLease } =
       await import("@/modules/attendance/offline/db");

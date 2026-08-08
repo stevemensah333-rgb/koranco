@@ -127,13 +127,7 @@ def ingest_sync_operation(
             db, payload=payload, actor=actor, request_id=request_id, response=result
         )
     if record and record.status == "submitted":
-        same = (
-            record.harvest_date == payload.harvest_date
-            and record.farm_unit_id == payload.farm_unit_id
-            and str(record.quantity) == str(payload.quantity)
-            and record.unit == payload.unit
-            and (record.notes or "") == (payload.notes or "")
-        )
+        same = _same_snapshot(record, payload)
         result = HarvestSyncResponse(
             operation_id=payload.operation_id,
             result="already_applied" if same else "conflict",
@@ -156,49 +150,29 @@ def ingest_sync_operation(
         return _store_result(
             db, payload=payload, actor=actor, request_id=request_id, response=result
         )
+    if record is None and payload.base_server_version is not None:
+        result = HarvestSyncResponse(
+            operation_id=payload.operation_id,
+            result="conflict",
+            message="The server draft is no longer available.",
+        )
+        return _store_result(
+            db, payload=payload, actor=actor, request_id=request_id, response=result
+        )
     audit_request_id = f"{request_id or 'sync'}:{payload.operation_id}"
     try:
         with db.begin_nested():
             if record is None:
-                # create draft with client-supplied id
                 create_draft(
                     db,
                     actor,
-                    # reuse HarvestValues shape by building a minimal object
-                    # compatible with create_draft
-                    values=type(
-                        "V",
-                        (),
-                        {
-                            "harvest_date": payload.harvest_date,
-                            "farm_unit_id": payload.farm_unit_id,
-                            "quantity": payload.quantity,
-                            "unit": payload.unit,
-                            "notes": payload.notes,
-                        },
-                    )(),
+                    values=payload,
                     request_id=audit_request_id,
                     record_id=payload.harvest_record_id,
                 )
             locked = load_record(db, payload.harvest_record_id, for_update=True)
-            # apply latest values as draft update and submit
-            update_draft(
-                db,
-                locked,
-                type(
-                    "V",
-                    (),
-                    {
-                        "harvest_date": payload.harvest_date,
-                        "farm_unit_id": payload.farm_unit_id,
-                        "quantity": payload.quantity,
-                        "unit": payload.unit,
-                        "notes": payload.notes,
-                        "expected_version": locked.version,
-                    },
-                )(),
-                locked.version,
-            )
+            if record is not None:
+                update_draft(db, locked, payload, locked.version)
             submit_record(db, actor, locked, audit_request_id)
     except HTTPException as exc:
         result = HarvestSyncResponse(

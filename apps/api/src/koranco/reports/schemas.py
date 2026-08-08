@@ -1,79 +1,115 @@
-from datetime import date
-from typing import Any
+import uuid
+from datetime import date, datetime
+from decimal import Decimal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
-
-class OverviewToday(BaseModel):
-    attendance_sessions: int = 0
-    present_count: int = 0
-    absent_count: int = 0
-    harvest_records: int = 0
-    harvest_totals: dict[str, float] = Field(default_factory=dict)  # unit -> total
+from koranco.harvest.schemas import HarvestUnit
 
 
-class OverviewAttention(BaseModel):
-    # Only genuine server-visible states
-    harvest_needs_attention: int = 0  # placeholder for future sync visibility
-    attendance_needs_attention: int = 0
+class HarvestUnitTotal(BaseModel):
+    """A harvest quantity total grouped independently by its own unit."""
+
+    unit: HarvestUnit
+    record_count: int
+    quantity: Decimal
 
 
-class RecentHarvestRecord(BaseModel):
-    id: str
-    harvest_date: date
-    farm_unit_code: str
-    farm_unit_name: str
-    quantity: str
-    unit: str
-    submitted_by: str | None = None
-
-
-class RecentAttendanceSession(BaseModel):
-    id: str
-    attendance_date: date
-    present_count: int
-    absent_count: int
-    submitted_by: str | None = None
-
-
-class OverviewResponse(BaseModel):
-    today: OverviewToday
-    attention: OverviewAttention
-    recent_harvest: list[RecentHarvestRecord]
-    recent_attendance: list[RecentAttendanceSession]
-
-
-class AttendanceReportRow(BaseModel):
-    attendance_date: date
-    session_id: str
+class OverviewAttendance(BaseModel):
+    submitted_sessions: int
     present_count: int
     absent_count: int
     roster_count: int
-    submitted_by: str | None = None
 
 
-class HarvestReportRow(BaseModel):
+class OverviewHarvest(BaseModel):
+    submitted_records: int
+    by_unit: list[HarvestUnitTotal]
+
+
+class RecentAttendanceSession(BaseModel):
+    id: uuid.UUID
+    attendance_date: date
+    submitted_by_name: str | None
+    submitted_at: datetime | None
+    present_count: int
+    absent_count: int
+    roster_count: int
+
+
+class RecentHarvestRecord(BaseModel):
+    id: uuid.UUID
     harvest_date: date
-    record_id: str
+    farm_unit_id: uuid.UUID
     farm_unit_code: str
     farm_unit_name: str
-    quantity: str
-    unit: str
-    submitted_by: str | None = None
+    quantity: Decimal
+    unit: HarvestUnit
+    submitted_by_name: str | None
+    submitted_at: datetime | None
 
 
-class HarvestTotalsByUnit(BaseModel):
-    unit: str
-    total: float
-    record_count: int
+class OverviewResponse(BaseModel):
+    date: date
+    attendance: OverviewAttendance
+    harvest: OverviewHarvest
+    recent_attendance: list[RecentAttendanceSession]
+    recent_harvest: list[RecentHarvestRecord]
 
 
-class HarvestReportResponse(BaseModel):
-    totals_by_unit: list[HarvestTotalsByUnit]
-    records: list[HarvestReportRow]
-    total_records: int
+class AttendanceSessionReport(BaseModel):
+    """One submitted AttendanceSession with the roster it contains."""
+
+    id: uuid.UUID
+    attendance_date: date
+    submitted_at: datetime | None
+    submitted_by_id: uuid.UUID | None
+    submitted_by_name: str | None
+    recorded_by_name: str
+    present_count: int
+    absent_count: int
+    roster_count: int
 
 
 class AttendanceReportResponse(BaseModel):
-    sessions: list[AttendanceReportRow]
-    total_sessions: int
+    date_from: date
+    date_to: date
+    submitted_session_count: int
+    present_count: int
+    absent_count: int
+    roster_count: int
+    sessions: list[AttendanceSessionReport]
+
+
+class HarvestFarmUnitTotal(BaseModel):
+    """Harvest totals for one FarmUnit, keeping every unit separate."""
+
+    farm_unit_id: uuid.UUID
+    farm_unit_code: str
+    farm_unit_name: str
+    farm_unit_type: str
+    record_count: int
+    by_unit: list[HarvestUnitTotal]
+
+
+class HarvestSourceRecord(BaseModel):
+    id: uuid.UUID
+    harvest_date: date
+    farm_unit_id: uuid.UUID
+    farm_unit_code: str
+    farm_unit_name: str
+    farm_unit_type: str
+    quantity: Decimal
+    unit: HarvestUnit
+    notes: str | None
+    submitted_by_name: str | None
+    submitted_at: datetime | None
+
+
+class HarvestReportResponse(BaseModel):
+    date_from: date
+    date_to: date
+    submitted_record_count: int
+    by_unit: list[HarvestUnitTotal]
+    by_farm_unit: list[HarvestFarmUnitTotal]
+    records: list[HarvestSourceRecord]

@@ -190,7 +190,10 @@ development/test:
 6. verify migration head and representative records/invariants.
 
 It uses only synthetic data and never touches real Koranco data. Run it before a
-production pilot and repeat on a defined schedule. Example:
+production pilot and repeat on a defined schedule. A `backup-restore-drill` CI
+job is documented but not currently present because this GitHub App lacks the
+`workflows` permission; a maintainer with that permission should add the job.
+Until then, running and recording this drill is a manual release gate. Example:
 
 ```sh
 PGHOST=localhost PGPORT=5432 PGUSER=koranco PGPASSWORD='...' \

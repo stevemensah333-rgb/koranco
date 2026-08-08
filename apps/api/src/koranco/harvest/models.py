@@ -13,6 +13,7 @@ from sqlalchemy import (
     Integer,
     Numeric,
     String,
+    UniqueConstraint,
     func,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -82,6 +83,7 @@ class HarvestSyncOperation(Base):
             "result_status IN ('applied', 'already_applied', 'conflict', 'rejected')",
             name="ck_harvest_sync_result_status",
         ),
+        UniqueConstraint("operation_id", name="uq_harvest_sync_operation_id"),
         Index("ix_harvest_sync_actor_processed", "actor_user_id", "processed_at"),
     )
 

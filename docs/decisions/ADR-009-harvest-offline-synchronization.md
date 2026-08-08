@@ -27,11 +27,15 @@ Do not mark unresolved unit semantics as confirmed Koranco policy.
 - Supersedes (on acceptance): the "Harvest is online-only" delivery boundary in [ADR-007](ADR-007-online-attendance-integrity.md) context, `docs/product/harvest.md`, and `docs/architecture/offline-sync.md`.
 - Depends on: [ADR-003](ADR-003-pwa-field-strategy.md), [ADR-006](ADR-006-generic-farm-unit-hierarchy.md), [ADR-008](ADR-008-attendance-offline-synchronization.md).
 
-> **This ADR is a proposal, not an accepted decision.** It describes a change from the current, documented online-only Harvest behavior to an offline-capable Harvest capture workflow. No product code implements it. It must be reviewed and explicitly approved by an accountable Koranco decision owner before any implementation phase begins. Until then, Harvest remains online-only exactly as ADR-007-era documentation states.
+> **Implementation note (2026-08-08):** This accepted decision is implemented.
+> The context below retains the original problem statement and alternatives so
+> future maintainers can understand why the protocol has this shape.
 
 ## Context
 
-Harvest is currently online-only by deliberate decision. `docs/product/harvest.md` states Harvest "writes nothing to IndexedDB, localStorage, the attendance outbox, or the attendance sync API," and `docs/architecture/offline-sync.md` states "Harvest is intentionally online-only" and that a future phase "must define Harvest-specific snapshot equality and conflict rules and must not put Harvest payloads into the attendance endpoint or copy a second synchronization engine."
+Harvest was originally online-only by deliberate decision. Earlier versions of
+`docs/product/harvest.md` and `docs/architecture/offline-sync.md` recorded that
+boundary and required a Harvest-specific protocol before it could change.
 
 Field harvesting happens in the same low-connectivity blocks where attendance is captured. If Koranco confirms that harvest quantities must be recorded at the point of work rather than transcribed later online, the online-only boundary becomes an operational gap. Attendance already proved a durable, owner-scoped, idempotent offline protocol (ADR-008). The question this ADR answers is *how* Harvest could adopt an equivalent protocol **without** copying the attendance engine, without last-write-wins, and without inventing unconfirmed Koranco business rules.
 
@@ -51,7 +55,7 @@ Field harvesting happens in the same low-connectivity blocks where attendance is
 - HarvestRecord lifecycle: draft/submitted, optimistic version, row-lock idempotent submission, submitted records not deletable, corrections online-only with reason + before/after audit.
 - Harvest duplicate reality: **multiple legitimate HarvestRecords may share the same FarmUnit and date.** FarmUnit+date is therefore *not* a uniqueness or equivalence rule.
 
-## Decision (proposed)
+## Decision
 
 Adopt offline Harvest **capture** using the same *primitives* as attendance but a **Harvest-specific** local store, sync endpoint, ingestion path, and conflict rules. Do **not** build a generic synchronization framework or command bus, and do **not** route Harvest through the attendance endpoint.
 
@@ -171,7 +175,7 @@ This deliberately stops short of a generic sync framework. Shared code is limite
 
 **Chosen option: a new Harvest-specific `harvest_sync_operations` table.** Migration 0006 is **not** rewritten and `attendance_sync_operations` is **not** generalized in this phase.
 
-New forward migration (proposed `0008_harvest_offline_sync`) adds:
+Forward migration `0008_harvest_offline_sync` adds:
 
 - `harvest_sync_operations`: `operation_id` (PK, UUID), `actor_user_id` (FK → application_users, RESTRICT), `harvest_record_id` (UUID; the client aggregate ID, FK → harvest_records after apply, nullable until applied or use no FK and rely on application logic — decide in Phase 1), `payload_version` (int), `result` (check-constrained: `applied`/`already_applied`/`conflict`/`rejected`), `result_message` (bounded string), `request_id` (nullable), `created_at`, `processed_at`. Unique on `operation_id`.
 - The Harvest permission set already exists (migration 0007); no new permissions are required. Offline reuses `harvest.read` / `harvest.record`.
@@ -271,7 +275,7 @@ Plus, mirroring attendance testing discipline: backend PostgreSQL integration te
 
 ## Open questions / dependencies for Koranco (do not infer)
 
-- Is offline Harvest capture actually required, and in which blocks/roles? (If "no," keep online-only and archive this ADR as rejected.)
+- Which blocks should be in scope if Koranco later restricts the currently approved Manager/Supervisor workflow?
 - Are the two units (`fruit_count`, `kilograms`) confirmed, since offline devices will cache and enforce the set client-side between preparations?
 - Is the 12-hour lease appropriate for Harvest field sessions, or different from attendance?
 - Retention for `harvest_sync_operations` and local confirmed copies.

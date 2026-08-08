@@ -2,6 +2,7 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal
 from enum import StrEnum
+from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -91,21 +92,16 @@ class HarvestRecordListResponse(BaseModel):
     offset: int
 
 
-class HarvestSyncRequest(BaseModel):
+class HarvestSyncRequest(HarvestValues):
     operation_id: uuid.UUID
-    operation_type: str = Field(pattern="^submit_harvest_snapshot$")
+    operation_type: Literal["submit_harvest_snapshot"]
     harvest_record_id: uuid.UUID
     payload_version: int = Field(ge=1)
-    harvest_date: date
-    farm_unit_id: uuid.UUID
-    quantity: Decimal
-    unit: HarvestUnit
-    notes: str | None = None
     base_server_version: int | None = Field(default=None, ge=1)
 
 
 class HarvestSyncResponse(BaseModel):
     operation_id: uuid.UUID
-    result: str
+    result: Literal["applied", "already_applied", "conflict", "rejected"]
     message: str
     record: HarvestRecordResponse | None = None

@@ -22,7 +22,7 @@ Owns online attendance sessions and entries, draft/submission state, attendance 
 
 ### Harvest
 
-Owns online harvest drafts, submission, quantity/unit validation, FarmUnit specificity, controlled correction, and query behavior. It references one stable FarmUnit and resolves current display identity from Farm Structure. It has no Worker/team, crop-cycle, quality, batch, destination, inventory, sales, or export relationship. Its two allowed units are provisional pending Koranco confirmation.
+Owns online/offline harvest drafts, first submission, quantity/unit validation, FarmUnit specificity, controlled online correction, and query behavior. It references one stable FarmUnit and resolves current display identity from Farm Structure. It has no Worker/team, crop-cycle, quality, batch, destination, inventory, sales, or export relationship. Its two allowed units are provisional pending Koranco confirmation.
 
 ### Audit
 
@@ -30,9 +30,15 @@ Provides tamper-resistant history for significant actions and corrections across
 
 ### Synchronization
 
-The implemented boundary coordinates durable delivery, owner isolation, idempotency, sync visibility, and conflicts only for attendance capture. Attendance-specific ingestion remains beside the attendance domain and invokes its rules. It is not a universal synchronization framework and does not decide domain conflicts independently.
-
-A future offline Harvest phase is **proposed but not implemented** in [ADR-009](../decisions/ADR-009-harvest-offline-synchronization.md). It would follow this same rule: Harvest ingestion sits beside the Harvest domain with its own processed-operation table and endpoint, sharing only transport primitives (lease, owner isolation, connectivity, outbox state machine, update gate, status surface). Generalizing into a shared synchronization framework is deliberately deferred until a third offline domain demonstrates the need.
+The implemented boundary coordinates durable delivery, owner isolation,
+idempotency, sync visibility, and conflicts for Attendance and Harvest capture.
+Domain-specific ingestion remains beside each domain and invokes its existing
+rules. Harvest has its own outbox, processed-operation table, endpoint, and sync
+engine while sharing narrow transport primitives (lease, owner isolation,
+connectivity triggers, status surface, and update gate). It is not a universal
+synchronization framework and does not decide domain conflicts independently.
+Generalization remains deferred until a third offline domain demonstrates a
+concrete need.
 
 ### Reporting
 

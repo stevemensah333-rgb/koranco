@@ -40,7 +40,7 @@ test("offline attendance survives reload, queues, reconnects, and confirms once"
     };
   });
   expect(offlineStorage.databases).toContain("koranco-attendance-offline");
-  expect(offlineStorage.cacheNames).toContain("koranco-attendance-shell-v1");
+  expect(offlineStorage.cacheNames).toContain("koranco-field-shell-v2");
   expect(
     offlineStorage.requests.some((url) => url.includes("/api/")),
   ).toBeFalsy();

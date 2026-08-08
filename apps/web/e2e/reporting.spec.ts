@@ -2,37 +2,44 @@ import { expect, test } from "@playwright/test";
 import type { APIRequestContext, BrowserContext, Page } from "@playwright/test";
 
 const password = "a long example password";
-const api = "http://127.0.0.1:8100";
+const api = "http://127.0.0.1:8100/api/v1";
 
 async function login(page: Page, user: string) {
   await page.goto("/login");
   await page.getByLabel("Login identifier").fill(user);
   await page.getByLabel("Password").fill(password);
   await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page).toHaveURL(/\//);
+  await expect(page).toHaveURL(/\/$/);
 }
 
-async function authorizationCookie(context: BrowserContext) {
-  return (await context.cookies())
-    .map((cookie) => `${cookie.name}=${cookie.value}`)
-    .join("; ");
-}
-
-function authed(request: APIRequestContext, cookie: string) {
+async function authorizationHeaders(context: BrowserContext) {
+  const cookies = await context.cookies();
+  const csrf = cookies.find((cookie) => cookie.name === "koranco_csrf")?.value;
+  expect(csrf).toBeTruthy();
   return {
-    get: (path: string) =>
-      request.get(api + path, { headers: { Cookie: cookie } }),
+    Cookie: cookies
+      .map((cookie) => `${cookie.name}=${cookie.value}`)
+      .join("; "),
+    "Content-Type": "application/json",
+    Origin: "http://127.0.0.1:3100",
+    "X-CSRF-Token": csrf!,
+  };
+}
+
+function authed(request: APIRequestContext, headers: Record<string, string>) {
+  return {
+    get: (path: string) => request.get(api + path, { headers }),
     post: async (path: string, body?: object) => {
       const response = await request.post(api + path, {
-        headers: { Cookie: cookie, "Content-Type": "application/json" },
+        headers,
         data: body ?? {},
       });
-      expect(response.status()).toBe(201);
+      expect([200, 201]).toContain(response.status());
       return response.json() as Promise<Record<string, never> & { id: string }>;
     },
     put: async (path: string, body: object) => {
       const response = await request.put(api + path, {
-        headers: { Cookie: cookie, "Content-Type": "application/json" },
+        headers,
         data: body,
       });
       expect(response.status()).toBe(200);
@@ -48,7 +55,7 @@ async function seedSubmittedRecords(
   context: BrowserContext,
   request: APIRequestContext,
 ) {
-  const client = authed(request, await authorizationCookie(context));
+  const client = authed(request, await authorizationHeaders(context));
   const today = new Date().toISOString().slice(0, 10);
 
   const units = await (await client.get("/farm-units?search=E2E-BLOCK")).json();
@@ -102,7 +109,11 @@ test("manager sees the operational overview with submitted records", async ({
   await expect(
     page.getByRole("table", { name: "Harvest totals by FarmUnit" }),
   ).toBeVisible();
-  await expect(page.getByText("E2E-BLOCK")).toBeVisible();
+  await expect(
+    page
+      .getByRole("table", { name: "Harvest totals by FarmUnit" })
+      .getByText("E2E-BLOCK"),
+  ).toBeVisible();
 
   await page.goto("/reports/attendance");
   await expect(

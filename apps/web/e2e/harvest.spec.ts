@@ -50,6 +50,72 @@ test("supervisor can record a harvest and view submitted detail", async ({
   expect((await response.json()).total).toBeGreaterThan(0);
 });
 
+test("offline Harvest queues on the device and confirms after reconnect", async ({
+  context,
+  page,
+}) => {
+  await login(page, "supervisor.a");
+  await page.goto("/harvest");
+  await page
+    .getByRole("button", { name: "Prepare FarmUnits for offline use" })
+    .click();
+  await expect(page.getByText(/FarmUnits refreshed/)).toBeVisible();
+
+  await page.getByRole("link", { name: "Record harvest" }).click();
+  await expect(page).toHaveURL(/\/harvest\/[0-9a-f-]+$/);
+  await page.getByLabel("Search by code or name").fill("E2E-BLOCK");
+  await page.getByRole("button", { name: /E2E-BLOCK/ }).click();
+  await page.getByLabel("Quantity").fill("21");
+
+  await context.setOffline(true);
+  await page.getByRole("button", { name: "Save draft" }).click();
+  await expect(page.getByText("Saved on this device.")).toBeVisible();
+  await page.getByRole("button", { name: "Review" }).click();
+  await page.getByRole("button", { name: "Submit harvest" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Harvest saved on this device" }),
+  ).toBeVisible();
+  await expect(page.getByText(/Waiting to sync/).first()).toBeVisible();
+
+  await context.setOffline(false);
+  await page.getByRole("button", { name: "Sync now" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Submitted harvest" }),
+  ).toBeVisible();
+  await expect(page.locator("ol.audit-list li")).toHaveCount(2);
+});
+
+test("lost Harvest sync response retries without duplicate submission", async ({
+  page,
+}) => {
+  await login(page, "supervisor.a");
+  await page.goto("/harvest/new");
+  await page.getByLabel("Search by code or name").fill("E2E-BLOCK");
+  await page.getByRole("button", { name: /E2E-BLOCK/ }).click();
+  await page.getByLabel("Quantity").fill("22");
+  await page.getByRole("button", { name: "Review" }).click();
+
+  let first = true;
+  await page.route("**/harvest-records/sync", async (route) => {
+    if (!first) return route.continue();
+    first = false;
+    const response = await route.fetch();
+    expect(response.ok()).toBeTruthy();
+    await route.abort("connectionreset");
+  });
+  await page.getByRole("button", { name: "Submit harvest" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Harvest saved on this device" }),
+  ).toBeVisible();
+
+  await page.unroute("**/harvest-records/sync");
+  await page.getByRole("button", { name: "Sync now" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Submitted harvest" }),
+  ).toBeVisible();
+  await expect(page.locator("ol.audit-list li")).toHaveCount(2);
+});
+
 test("manager can correct a submitted harvest and see correction history", async ({
   page,
 }) => {
@@ -79,7 +145,7 @@ test("manager can correct a submitted harvest and see correction history", async
 
   await expect(page.getByText("Harvest correction recorded.")).toBeVisible();
   await expect(page.getByText(/corrected/)).toBeVisible();
-  await expect(page.getByLabel("Quantity")).toHaveValue("10");
+  await expect(page.getByLabel("Quantity")).toHaveValue("10.000");
   await expect(page.getByText(/Update quantity/)).toBeVisible();
 });
 

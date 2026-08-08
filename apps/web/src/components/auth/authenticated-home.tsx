@@ -57,7 +57,7 @@ export function AuthenticatedHome() {
       if (
         (await hasPendingForOwner(user.id)) &&
         !window.confirm(
-          "Unsynced attendance will remain on this device and cannot be synchronized by another account. Sign out anyway?",
+          "Unsynced Attendance or Harvest will remain on this device and cannot be synchronized by another account. Sign out anyway?",
         )
       )
         return;
@@ -184,8 +184,8 @@ export function AuthenticatedHome() {
       </section>
       <section className="content-section" aria-label="Implementation status">
         <Alert title="Operational recording available" tone="info">
-          Use the navigation to access the approved registers, attendance, and
-          online Harvest workflow.
+          Use the navigation to access the approved registers and
+          offline-capable Attendance and Harvest workflows.
         </Alert>
       </section>
     </ManagementShell>

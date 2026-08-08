@@ -43,8 +43,10 @@ export default function globalSetup() {
     ...process.env,
     KORANCO_ENVIRONMENT: "test",
     KORANCO_DATABASE_URL: databaseUrl,
+    KORANCO_CORS_ORIGINS: '["http://127.0.0.1:3100"]',
+    KORANCO_CSRF_TRUSTED_ORIGINS: '["http://127.0.0.1:3100"]',
     PYTHONPATH: "src",
-    UV_CACHE_DIR: "/private/tmp/koranco-uv-cache",
+    UV_CACHE_DIR: "/tmp/koranco-uv-cache",
   };
   execFileSync("uv", ["run", "alembic", "upgrade", "head"], {
     cwd: api,
