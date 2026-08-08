@@ -109,7 +109,11 @@ test("manager sees the operational overview with submitted records", async ({
   await expect(
     page.getByRole("table", { name: "Harvest totals by FarmUnit" }),
   ).toBeVisible();
-  await expect(page.getByText("E2E-BLOCK")).toBeVisible();
+  await expect(
+    page
+      .getByRole("table", { name: "Harvest totals by FarmUnit" })
+      .getByText("E2E-BLOCK"),
+  ).toBeVisible();
 
   await page.goto("/reports/attendance");
   await expect(

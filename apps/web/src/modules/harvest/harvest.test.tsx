@@ -203,7 +203,9 @@ describe("field harvest capture", () => {
     expect(
       await screen.findByRole("heading", { name: "Submitted harvest" }),
     ).toBeInTheDocument();
-    expect(await screen.findByText(/Supervisor/)).toBeInTheDocument();
+    expect((await screen.findAllByText(/Supervisor/)).length).toBeGreaterThan(
+      0,
+    );
     fireEvent.click(screen.getByRole("button", { name: "Correct record" }));
     fireEvent.change(screen.getByLabelText("Quantity"), {
       target: { value: "30" },
