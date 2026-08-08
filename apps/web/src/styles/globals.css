@@ -825,8 +825,7 @@ a:hover {
 }
 
 .management-layout {
-  width: min(100%, var(--content-width));
-  margin: 0 auto;
+  width: 100%;
 }
 
 .management-sidebar {
@@ -1069,17 +1068,19 @@ a:hover {
   .management-layout {
     display: grid;
     grid-template-columns: var(--navigation-width) minmax(0, 1fr);
+    width: 100%;
   }
 
   .management-sidebar {
     display: block;
     min-height: calc(100vh - 4rem);
-    padding: var(--space-5) var(--space-3);
+    padding: var(--space-5) var(--space-3) var(--space-8);
     border-right: 1px solid var(--color-border);
     background: var(--color-surface);
   }
 
   .management-content {
+    max-width: var(--content-width);
     padding-top: var(--space-8);
   }
 }
@@ -1132,7 +1133,24 @@ a:hover {
 }
 
 /* Authentication */
-.login-page,
+.login-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: var(--color-canvas);
+}
+
+.login-brandbar {
+  flex: none;
+}
+
+.login-body {
+  display: grid;
+  flex: 1;
+  place-items: center;
+  padding: var(--space-8) var(--page-gutter) var(--space-12);
+}
+
 .auth-loading {
   display: grid;
   min-height: 100vh;
@@ -1150,19 +1168,20 @@ a:hover {
 .login-header {
   padding: var(--space-6);
   border-bottom: 1px solid var(--color-border);
-  background: var(--color-text);
-  color: var(--color-on-strong);
+  background: var(--color-surface-subtle);
 }
 
 .login-header h1 {
-  margin: var(--space-6) 0 0;
+  margin: 0;
+  color: var(--color-text);
   font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
   line-height: var(--line-tight);
 }
 
 .login-header p {
   margin: var(--space-2) 0 0;
-  color: var(--color-on-strong-muted);
+  color: var(--color-text-muted);
   font-size: var(--text-sm);
 }
 
@@ -1194,6 +1213,10 @@ a:hover {
 @media (max-width: 39.99rem) {
   .session-identity {
     display: none;
+  }
+
+  .login-body {
+    padding-top: var(--space-6);
   }
 
   .login-header,

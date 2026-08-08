@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import LoginPage from "@/app/login/page";
 import { AuthenticatedHome } from "./authenticated-home";
 import { LoginForm } from "./login-form";
 import { ApiError } from "@/lib/api/client";
@@ -36,6 +37,21 @@ function submitLogin(
   });
   fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
 }
+
+describe("LoginPage", () => {
+  it("renders the product banner, sign-in landmarks, and identity", () => {
+    render(<LoginPage />);
+
+    expect(screen.getByRole("banner")).toBeInTheDocument();
+    expect(screen.getByRole("main")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Sign in" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Koranco Farms")).toBeInTheDocument();
+    expect(screen.getByLabelText(/Login identifier/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Password/)).toBeInTheDocument();
+  });
+});
 
 describe("LoginForm", () => {
   it("uses labelled password-manager-compatible controls", () => {
