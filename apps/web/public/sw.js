@@ -1,5 +1,10 @@
 const CACHE_NAME = "koranco-attendance-shell-v1";
-const SHELL_ROUTES = ["/attendance", "/login", "/manifest.webmanifest"];
+const SHELL_ROUTES = [
+  "/attendance",
+  "/harvest",
+  "/login",
+  "/manifest.webmanifest",
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

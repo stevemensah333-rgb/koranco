@@ -1,6 +1,20 @@
 # ADR-009: Harvest offline synchronization
 
-- Status: Proposed
+- Status: Accepted
+
+**Human-approved policy (2026-08-08):**
+
+- Offline Harvest is required for field operation.
+- Manager and Supervisor may use offline Harvest if their validated permissions include `harvest.record`.
+- Worker application accounts may not.
+- Offline authorization lease remains 12 hours from successful server validation.
+- Permissions are domain-specific; authentication alone does not authorize offline Harvest.
+- Processed Harvest synchronization operations are retained for at least 12 months initially.
+- A Manager will eventually be the authority for stranded-queue reconciliation, but that recovery workflow is NOT part of this phase.
+- Current supported Harvest units remain provisional and must remain centrally configurable/easy to revise when Koranco confirms its real units.
+
+Do not mark unresolved unit semantics as confirmed Koranco policy.
+
 - Date: 2026-08-08
 - Supersedes (on acceptance): the "Harvest is online-only" delivery boundary in [ADR-007](ADR-007-online-attendance-integrity.md) context, `docs/product/harvest.md`, and `docs/architecture/offline-sync.md`.
 - Depends on: [ADR-003](ADR-003-pwa-field-strategy.md), [ADR-006](ADR-006-generic-farm-unit-hierarchy.md), [ADR-008](ADR-008-attendance-offline-synchronization.md).

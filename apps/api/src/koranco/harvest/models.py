@@ -15,7 +15,7 @@ from sqlalchemy import (
     String,
     func,
 )
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from koranco.db.base import Base
@@ -70,3 +70,32 @@ class HarvestRecord(Base):
     farm_unit: Mapped[FarmUnit] = relationship()
     creator: Mapped[ApplicationUser] = relationship(foreign_keys=[created_by])
     submitter: Mapped[ApplicationUser | None] = relationship(foreign_keys=[submitted_by])
+
+
+class HarvestSyncOperation(Base):
+    __tablename__ = "harvest_sync_operations"
+    __table_args__ = (
+        CheckConstraint(
+            "operation_type = 'submit_harvest_snapshot'", name="ck_harvest_sync_operation_type"
+        ),
+        CheckConstraint(
+            "result_status IN ('applied', 'already_applied', 'conflict', 'rejected')",
+            name="ck_harvest_sync_result_status",
+        ),
+        Index("ix_harvest_sync_actor_processed", "actor_user_id", "processed_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    operation_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    actor_user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("application_users.id", ondelete="RESTRICT"), nullable=False
+    )
+    operation_type: Mapped[str] = mapped_column(String(48), nullable=False)
+    harvest_record_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    payload_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    result_status: Mapped[str] = mapped_column(String(24), nullable=False)
+    result_data: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False)
+    request_id: Mapped[str | None] = mapped_column(String(128))
+    processed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )

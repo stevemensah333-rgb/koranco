@@ -12,6 +12,8 @@ from koranco.harvest.schemas import (
     CreateHarvestRequest,
     HarvestRecordListResponse,
     HarvestRecordResponse,
+    HarvestSyncRequest,
+    HarvestSyncResponse,
     HarvestUnit,
     UpdateHarvestDraftRequest,
 )
@@ -24,6 +26,7 @@ from koranco.harvest.service import (
     submit_record,
     update_draft,
 )
+from koranco.harvest.sync import ingest_sync_operation
 from koranco.identity.dependencies import (
     AuthContext,
     DatabaseSession,
@@ -196,4 +199,20 @@ def record_audit(
     ).all()
     return AuditEventListResponse(
         items=[audit_response(event, name) for event, name in rows], total=len(rows)
+    )
+
+
+@router.post("/sync", response_model=HarvestSyncResponse)
+def sync_harvest(
+    payload: HarvestSyncRequest,
+    request: Request,
+    db: DatabaseSession,
+    auth: Annotated[AuthContext, Depends(require_csrf)],
+    _permission: Annotated[AuthContext, Depends(require_permission(Permission.HARVEST_RECORD))],
+) -> HarvestSyncResponse:
+    return ingest_sync_operation(
+        db,
+        payload=payload,
+        actor=auth.user,
+        request_id=request.state.request_id,
     )

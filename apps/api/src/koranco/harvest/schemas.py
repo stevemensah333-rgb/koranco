@@ -89,3 +89,23 @@ class HarvestRecordListResponse(BaseModel):
     total: int
     limit: int
     offset: int
+
+
+class HarvestSyncRequest(BaseModel):
+    operation_id: uuid.UUID
+    operation_type: str = Field(pattern="^submit_harvest_snapshot$")
+    harvest_record_id: uuid.UUID
+    payload_version: int = Field(ge=1)
+    harvest_date: date
+    farm_unit_id: uuid.UUID
+    quantity: Decimal
+    unit: HarvestUnit
+    notes: str | None = None
+    base_server_version: int | None = Field(default=None, ge=1)
+
+
+class HarvestSyncResponse(BaseModel):
+    operation_id: uuid.UUID
+    result: str
+    message: str
+    record: HarvestRecordResponse | None = None
