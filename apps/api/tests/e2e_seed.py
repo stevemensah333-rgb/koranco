@@ -4,6 +4,7 @@ from sqlalchemy import text
 
 from koranco.config.settings import get_settings
 from koranco.db.session import SessionFactory
+from koranco.farm_structure.models import FarmUnit
 from koranco.identity.models import ApplicationUser, UserPermission
 from koranco.identity.passwords import hash_password
 from koranco.identity.permissions import Role, permissions_for_role
@@ -18,13 +19,19 @@ def main() -> None:
     with SessionFactory.begin() as db:
         db.execute(
             text(
-                "TRUNCATE attendance_sync_operations, attendance_entries, attendance_sessions, "
+                "TRUNCATE harvest_records, attendance_sync_operations, attendance_entries, "
+                "attendance_sessions, "
                 "operational_audit_events, farm_units, workers, security_events, "
                 "authentication_login_attempts, application_sessions, "
                 "application_user_permissions, application_users CASCADE"
             )
         )
-        for login, role in (("supervisor.a", Role.SUPERVISOR), ("supervisor.b", Role.SUPERVISOR)):
+        for login, role in (
+            ("manager.a", Role.MANAGER),
+            ("supervisor.a", Role.SUPERVISOR),
+            ("supervisor.b", Role.SUPERVISOR),
+            ("worker.a", Role.WORKER),
+        ):
             user = ApplicationUser(
                 login_identifier=login,
                 display_name=login.title(),
@@ -48,6 +55,27 @@ def main() -> None:
                             updated_by=user.id,
                         )
                     )
+                field = FarmUnit(
+                    code="E2E-FIELD",
+                    name="E2E Field",
+                    unit_type="field",
+                    status="active",
+                    created_by=user.id,
+                    updated_by=user.id,
+                )
+                db.add(field)
+                db.flush()
+                db.add(
+                    FarmUnit(
+                        code="E2E-BLOCK",
+                        name="E2E Block",
+                        unit_type="block",
+                        parent_id=field.id,
+                        status="active",
+                        created_by=user.id,
+                        updated_by=user.id,
+                    )
+                )
 
 
 if __name__ == "__main__":

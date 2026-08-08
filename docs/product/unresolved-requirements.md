@@ -44,11 +44,16 @@ These questions require confirmation from accountable Koranco stakeholders. They
 
 ## Harvest
 
-- What is the unit of a harvest record: worker, crew, block, load, day, batch, or another entity?
-- Which quantities, units, grades, varieties, containers, destinations, or rejections are recorded?
+- The first record is one quantity from one active FarmUnit on one operational date. It has no Worker, team, crop-cycle, batch, destination, inventory, or quality relationship.
+- What are Koranco's official harvest units? `fruit_count` and `kilograms` are provisional configuration; no conversion is approved.
+- Is grade or quality/rejection recording required, and what are its controlled definitions?
+- Is crop, variety, or planting-cycle context required for operational harvest records?
+- Is team or crew attribution required, and what is the authoritative Team domain?
+- Are load or batch identifiers required before deferred full export traceability?
+- Must harvest identify a destination or export relationship?
 - What existing identifiers and forms must be preserved?
-- Who records, verifies, finalizes, and corrects a harvest record?
-- Which unit conversions are official?
+- Is the current Manager/Supervisor record-and-correct authority final, and is later verification required?
+- Which unit conversions, if any, are official?
 - What traceability is required in the initial scope without entering deferred full batch/export traceability?
 
 ## Corrections
@@ -62,7 +67,7 @@ These questions require confirmation from accountable Koranco stakeholders. They
 
 ## Offline operation
 
-- Attendance capture is the only implemented offline workflow; corrections and all management functions remain online-only.
+- Attendance capture is the only implemented offline workflow. Harvest and all corrections/management functions remain online-only.
 - The initial offline authorization lease is 12 hours. Is that suitable after field testing?
 - Which devices, operating systems, and browser versions must be supported?
 - Are devices assigned or shared, and how is loss or theft handled?

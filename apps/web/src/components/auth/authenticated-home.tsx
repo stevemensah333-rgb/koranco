@@ -157,6 +157,9 @@ export function AuthenticatedHome() {
         ...(user.permissions.includes("attendance.read")
           ? [{ href: "/attendance", label: "Attendance" }]
           : []),
+        ...(user.permissions.includes("harvest.read")
+          ? [{ href: "/harvest", label: "Harvest" }]
+          : []),
         ...(user.permissions.includes("farm_structure.read")
           ? [{ href: "/farm-structure", label: "Farm structure" }]
           : []),
@@ -199,9 +202,9 @@ export function AuthenticatedHome() {
         ) : null}
       </section>
       <section className="content-section" aria-label="Implementation status">
-        <Alert title="No operational modules are active" tone="info">
-          This authenticated area contains no farm records or management
-          reporting.
+        <Alert title="Operational recording available" tone="info">
+          Use the navigation to access the approved registers, attendance, and
+          online Harvest workflow.
         </Alert>
       </section>
     </ManagementShell>

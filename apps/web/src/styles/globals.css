@@ -227,6 +227,82 @@
   gap: var(--space-3);
 }
 
+.harvest-form {
+  display: grid;
+  gap: var(--space-4);
+}
+.harvest-form > label,
+.harvest-form fieldset,
+.harvest-correction label {
+  display: grid;
+  gap: var(--space-2);
+  font-weight: var(--weight-semibold);
+}
+.harvest-form fieldset {
+  padding: 0;
+  border: 0;
+}
+.farm-unit-options {
+  display: grid;
+  max-height: 16rem;
+  gap: var(--space-2);
+  overflow-y: auto;
+}
+.farm-unit-option {
+  min-height: var(--touch-target);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+  text-align: left;
+}
+.farm-unit-option small,
+.harvest-form small {
+  display: block;
+  color: var(--color-text-muted);
+}
+.farm-unit-option.selected {
+  border: 2px solid var(--color-brand);
+  background: var(--color-brand-soft);
+}
+.quantity-control {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: var(--space-3);
+}
+.field-action-row {
+  display: flex;
+  gap: var(--space-3);
+}
+.field-action-row > * {
+  flex: 1;
+}
+.harvest-review,
+.harvest-correction {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 2px solid var(--color-brand);
+  background: var(--color-surface);
+}
+.harvest-review dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-2) var(--space-4);
+  margin: 0;
+}
+.harvest-review dd {
+  margin: 0;
+  font-weight: var(--weight-semibold);
+}
+.audit-list {
+  display: grid;
+  gap: var(--space-3);
+  padding-left: var(--space-5);
+}
+
 @media (min-width: 720px) {
   .attendance-tools {
     grid-template-columns: minmax(260px, 1fr) auto auto;

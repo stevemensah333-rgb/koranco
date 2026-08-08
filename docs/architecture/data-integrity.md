@@ -33,6 +33,8 @@ Online attendance uses draft/submitted state, optimistic versions for draft repl
 
 Offline attendance adds a durable processed-operation record with a globally unique operation UUID, original actor, target session, payload version, bounded result, and processing time. An advisory transaction lock serializes identical concurrent operation IDs. A same-actor replay reconciles from the stored result; cross-actor replay is rejected. This transport idempotency is separate from the submitted-roster fingerprint and invokes the same attendance transaction rules; see ADR-008.
 
+Online harvest stores quantities as `NUMERIC(14,3)` with positive-value, constrained-unit, and whole-fruit-count database checks. Draft/submitted state and attribution are constrained together. Submission locks the stable record UUID, so retrying the same record is idempotent while distinct same-FarmUnit/date records remain valid. Optimistic versions reject stale draft updates and corrections. PostgreSQL prevents deleting submitted harvest; operational audit preserves correction reasons and before/after truth.
+
 ## Migration discipline
 
 - Make every schema change through Alembic and review generated migrations.

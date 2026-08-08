@@ -30,6 +30,9 @@ class Permission(StrEnum):
     ATTENDANCE_READ = "attendance.read"
     ATTENDANCE_RECORD = "attendance.record"
     ATTENDANCE_CORRECT = "attendance.correct"
+    HARVEST_READ = "harvest.read"
+    HARVEST_RECORD = "harvest.record"
+    HARVEST_CORRECT = "harvest.correct"
 
 
 ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
@@ -42,6 +45,9 @@ ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
             Permission.ATTENDANCE_READ,
             Permission.ATTENDANCE_RECORD,
             Permission.ATTENDANCE_CORRECT,
+            Permission.HARVEST_READ,
+            Permission.HARVEST_RECORD,
+            Permission.HARVEST_CORRECT,
         }
     ),
     Role.WORKER: frozenset({Permission.SYSTEM_STATUS_READ}),

@@ -61,3 +61,7 @@ Storage clearing, eviction, private browsing, device loss, browser uninstall, or
 - Processed-operation and local-confirmed-record retention periods.
 - Whether installations need a managed device identifier.
 - Incident response for device loss and browser-storage clearing.
+
+## Future Harvest integration
+
+Harvest is intentionally online-only. A future approved phase should reuse the attendance system's owner scope, authorization lease, stable operation ID, client-compatible aggregate UUID, payload version, durable outbox states, result categories, actor-bound replay, and server-side processed-operation record. It must define Harvest-specific snapshot equality and conflict rules and must not put Harvest payloads into the attendance endpoint or copy a second synchronization engine. No shared extraction is justified until that protocol is designed and tested.

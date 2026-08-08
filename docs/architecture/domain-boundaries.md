@@ -22,7 +22,7 @@ Owns online attendance sessions and entries, draft/submission state, attendance 
 
 ### Harvest
 
-Owns confirmed harvest capture, validation, correction, and query behavior. Its units, aggregation boundary, and relationships remain unresolved.
+Owns online harvest drafts, submission, quantity/unit validation, FarmUnit specificity, controlled correction, and query behavior. It references one stable FarmUnit and resolves current display identity from Farm Structure. It has no Worker/team, crop-cycle, quality, batch, destination, inventory, sales, or export relationship. Its two allowed units are provisional pending Koranco confirmation.
 
 ### Audit
 
@@ -43,7 +43,7 @@ Coordinates authorized operational configuration and user-facing administrative 
 ## Dependency rules
 
 - Dependencies should follow explicit domain capabilities rather than direct manipulation of another domain's persistence details.
-- Attendance and harvest may reference stable identities from workers and farm structure, but those reference requirements must be confirmed.
+- Attendance references stable Workers. Harvest references one stable FarmUnit; neither module owns its referenced register.
 - Audit and synchronization are supporting capabilities invoked by domain operations; they must not absorb domain rules.
 - Reporting reads authoritative facts through deliberate query boundaries and must not mutate operational domains.
 - Administration orchestrates approved capabilities and does not become a miscellaneous business-logic module.

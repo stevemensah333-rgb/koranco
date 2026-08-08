@@ -7,6 +7,7 @@ from koranco.attendance import models as attendance_models  # noqa: F401
 from koranco.config.settings import get_settings
 from koranco.db.base import Base
 from koranco.farm_structure import models as farm_structure_models  # noqa: F401
+from koranco.harvest import models as harvest_models  # noqa: F401
 from koranco.identity import models as identity_models  # noqa: F401
 from koranco.operational_audit import models as operational_audit_models  # noqa: F401
 from koranco.workers import models as worker_models  # noqa: F401
