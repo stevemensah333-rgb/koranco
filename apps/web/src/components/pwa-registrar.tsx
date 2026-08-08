@@ -1,12 +1,23 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { hasAnyPendingWork } from "@/modules/attendance/offline/db";
+
 import { getCurrentSession } from "@/lib/api/auth";
+import {
+  hasAnyPendingWork,
+  pendingCounts,
+} from "@/modules/attendance/offline/db";
 import { syncAttendance } from "@/modules/attendance/offline/sync";
+import { syncHarvest } from "@/modules/harvest/offline/sync";
 
 export function PwaRegistrar() {
   const [updateHeld, setUpdateHeld] = useState(false);
+  const [pending, setPending] = useState({
+    attendance: 0,
+    harvest: 0,
+    total: 0,
+  });
+
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
     let registration: ServiceWorkerRegistration | undefined;
@@ -31,6 +42,7 @@ export function PwaRegistrar() {
     document.addEventListener("visibilitychange", visible);
     return () => document.removeEventListener("visibilitychange", visible);
   }, []);
+
   useEffect(() => {
     let active = false;
     const trySync = async () => {
@@ -38,9 +50,11 @@ export function PwaRegistrar() {
       active = true;
       try {
         const user = await getCurrentSession();
-        await syncAttendance(user.id);
+        setPending(await pendingCounts(user.id));
+        await Promise.all([syncAttendance(user.id), syncHarvest(user.id)]);
+        setPending(await pendingCounts(user.id));
       } catch {
-        // The visible attendance UI explains pending authentication or connectivity states.
+        // Domain screens explain authentication, connectivity, and attention states.
       } finally {
         active = false;
       }
@@ -49,6 +63,7 @@ export function PwaRegistrar() {
     const visible = () => {
       if (document.visibilityState === "visible") void trySync();
     };
+    void trySync();
     window.addEventListener("online", online);
     document.addEventListener("visibilitychange", visible);
     return () => {
@@ -56,9 +71,21 @@ export function PwaRegistrar() {
       document.removeEventListener("visibilitychange", visible);
     };
   }, []);
-  return updateHeld ? (
-    <p className="pwa-update-notice" role="status">
-      An application update is waiting. Synchronize attendance before updating.
-    </p>
-  ) : null;
+
+  return (
+    <>
+      {pending.total ? (
+        <p className="pwa-sync-notice" role="status">
+          Waiting to sync: {pending.attendance} Attendance · {pending.harvest}{" "}
+          Harvest
+        </p>
+      ) : null}
+      {updateHeld ? (
+        <p className="pwa-update-notice" role="status">
+          An application update is waiting. Synchronize field records before
+          updating.
+        </p>
+      ) : null}
+    </>
+  );
 }

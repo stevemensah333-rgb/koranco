@@ -5,6 +5,7 @@ import { HarvestList } from "./harvest-list";
 import { HarvestWorkspace } from "./harvest-workspace";
 
 const replace = vi.fn();
+const router = { replace };
 const session = vi.fn();
 const list = vi.fn();
 const farmUnits = vi.fn();
@@ -14,10 +15,12 @@ const update = vi.fn();
 const submit = vi.fn();
 const correct = vi.fn();
 const audit = vi.fn();
-vi.mock("next/navigation", () => ({ useRouter: () => ({ replace }) }));
+const sync = vi.fn();
+vi.mock("next/navigation", () => ({ useRouter: () => router }));
 vi.mock("@/lib/api/auth", () => ({ getCurrentSession: () => session() }));
 vi.mock("@/modules/farm-structure/api", () => ({
   listFarmUnits: (...args: unknown[]) => farmUnits(...args),
+  activeFarmUnitsForOffline: async () => (await farmUnits()).items,
 }));
 vi.mock("@/modules/harvest/api", () => ({
   listHarvest: (...args: unknown[]) => list(...args),
@@ -27,6 +30,9 @@ vi.mock("@/modules/harvest/api", () => ({
   submitHarvest: (...args: unknown[]) => submit(...args),
   correctHarvest: (...args: unknown[]) => correct(...args),
   harvestAudit: (...args: unknown[]) => audit(...args),
+}));
+vi.mock("@/modules/harvest/offline/sync", () => ({
+  syncHarvest: (...args: unknown[]) => sync(...args),
 }));
 
 const user = {
@@ -88,10 +94,11 @@ beforeEach(() => {
     offset: 0,
   });
   farmUnits.mockResolvedValue({ items: [farmUnit], total: 1 });
-  get.mockResolvedValue(draft);
+  get.mockResolvedValue(submitted);
   create.mockResolvedValue(draft);
   update.mockResolvedValue({ ...draft, version: 2 });
   submit.mockResolvedValue(submitted);
+  sync.mockResolvedValue("synced");
   correct.mockResolvedValue({ ...submitted, quantity: "30.000", version: 3 });
   audit.mockResolvedValue({ items: [], total: 0 });
 });
@@ -146,14 +153,14 @@ describe("field harvest capture", () => {
       screen.getByRole("heading", { name: "Review before submission" }),
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Submit harvest" }));
-    await waitFor(() => expect(submit).toHaveBeenCalledWith("h1"));
+    await waitFor(() => expect(sync).toHaveBeenCalledWith(user.id));
     expect(
-      await screen.findByText("Harvest submitted successfully."),
+      await screen.findByText("Harvest submitted and confirmed by the server."),
     ).toBeInTheDocument();
   });
 
   it("preserves entered values after a server submission error", async () => {
-    submit.mockRejectedValue(
+    sync.mockRejectedValue(
       new ApiError("The selected FarmUnit is inactive", 409),
     );
     render(<HarvestWorkspace id="new" />);
@@ -166,7 +173,13 @@ describe("field harvest capture", () => {
     expect(
       await screen.findByText("The selected FarmUnit is inactive"),
     ).toBeInTheDocument();
-    expect(screen.getByLabelText("Quantity")).toHaveValue(18);
+    expect(
+      screen.getByText(
+        (_, element) =>
+          element?.tagName === "DD" &&
+          element.textContent?.trim() === "18 fruit",
+      ),
+    ).toBeInTheDocument();
   });
 
   it("shows submitted detail and performs a reasoned correction", async () => {

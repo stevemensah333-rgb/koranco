@@ -1084,11 +1084,17 @@ a:hover {
   }
 }
 
+.pwa-sync-notice,
 .pwa-update-notice {
   margin: 0;
   padding: 0.75rem 1rem;
-  background: var(--color-warning-soft, #fff2c6);
   color: var(--color-text, #17211a);
+}
+.pwa-sync-notice {
+  background: var(--color-info-soft, #e6f2ff);
+}
+.pwa-update-notice {
+  background: var(--color-warning-soft, #fff2c6);
   border-bottom: 1px solid var(--color-border, #bcc7bd);
   font-weight: 650;
   text-align: center;

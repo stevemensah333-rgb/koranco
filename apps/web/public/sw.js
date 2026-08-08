@@ -1,4 +1,4 @@
-const CACHE_NAME = "koranco-attendance-shell-v1";
+const CACHE_NAME = "koranco-field-shell-v2";
 const SHELL_ROUTES = [
   "/attendance",
   "/harvest",
@@ -37,10 +37,11 @@ self.addEventListener("fetch", (event) => {
   const isAsset = ["script", "style", "font", "image"].includes(
     request.destination,
   );
-  const isAttendanceResource = url.pathname.startsWith("/attendance");
-  const isAttendanceNavigation =
-    request.mode === "navigate" && isAttendanceResource;
-  if (!isAsset && !isAttendanceResource) return;
+  const fieldRoute = ["/attendance", "/harvest"].find((route) =>
+    url.pathname.startsWith(route),
+  );
+  const isFieldNavigation = request.mode === "navigate" && Boolean(fieldRoute);
+  if (!isAsset && !fieldRoute) return;
   event.respondWith(
     fetch(request)
       .then((response) => {
@@ -53,7 +54,8 @@ self.addEventListener("fetch", (event) => {
       .catch(async () => {
         const cached = await caches.match(request);
         if (cached) return cached;
-        if (isAttendanceNavigation) return await caches.match("/attendance");
+        if (isFieldNavigation && fieldRoute)
+          return await caches.match(fieldRoute);
         return Response.error();
       }),
   );

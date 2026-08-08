@@ -11,5 +11,8 @@ afterEach(async () => {
     offlineDb.drafts.clear(),
     offlineDb.outbox.clear(),
     offlineDb.leases.clear(),
+    offlineDb.harvestFarmUnits.clear(),
+    offlineDb.harvestDrafts.clear(),
+    offlineDb.harvestOutbox.clear(),
   ]);
 });

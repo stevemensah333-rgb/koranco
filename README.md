@@ -111,6 +111,7 @@ The guarded setup creates/resets only `koranco_e2e`; never point the E2E seeder 
 - [Domain boundaries](docs/architecture/domain-boundaries.md)
 - [Offline synchronization principles](docs/architecture/offline-sync.md)
 - [Physical-device offline attendance test](docs/operations/offline-attendance-field-test.md)
+- [Physical-device offline Harvest test](docs/operations/offline-harvest-field-test.md)
 - [Security principles](docs/architecture/security.md)
 - [Authentication and authorization](docs/architecture/authentication.md)
 - [Data integrity principles](docs/architecture/data-integrity.md)

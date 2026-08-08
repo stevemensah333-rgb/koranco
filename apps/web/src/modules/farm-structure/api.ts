@@ -24,6 +24,23 @@ export const listFarmUnits = (search = "", status = "", unitType = "") => {
     offset: number;
   }>(`/api/v1/farm-units?${query.toString()}`);
 };
+
+export async function activeFarmUnitsForOffline(): Promise<FarmUnit[]> {
+  const units: FarmUnit[] = [];
+  let offset = 0;
+  do {
+    const page = await apiRequest<{
+      items: FarmUnit[];
+      total: number;
+      limit: number;
+      offset: number;
+    }>(`/api/v1/farm-units?status=active&limit=100&offset=${offset}`);
+    units.push(...page.items);
+    offset += page.items.length;
+    if (units.length >= page.total || page.items.length === 0) break;
+  } while (true);
+  return units;
+}
 export const saveFarmUnit = (
   unit: FarmUnit | null,
   payload: {

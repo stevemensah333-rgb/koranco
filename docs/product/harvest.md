@@ -29,17 +29,39 @@ Submitted records cannot be freely edited or deleted. Manager or Supervisor corr
 
 ## Authorization and current delivery boundary
 
-Managers and Supervisors receive `harvest.read`, `harvest.record`, and `harvest.correct`. Worker application accounts receive none. Backend permission dependencies are authoritative.
+Managers and Supervisors receive `harvest.read`, `harvest.record`, and
+`harvest.correct`. Worker application accounts receive none. Backend permission
+dependencies are authoritative.
 
-Harvest is online-only in this phase. It writes nothing to IndexedDB, localStorage, the attendance outbox, or the attendance sync API. A later offline phase should reuse the proven owner-scoped storage, stable operation and aggregate UUIDs, payload versions, durable outbox states, actor-bound replay, server idempotency, and explicit result categories. That phase should extract shared primitives deliberately rather than copy the attendance subsystem.
+New Harvest draft capture and first submission are available offline under
+[ADR-009](../decisions/ADR-009-harvest-offline-synchronization.md). Submitted-
+record correction remains online-only, along with Farm Structure and account
+administration, reporting, and audit browsing.
 
-## Offline capture (implemented) — historical proposal
+## Offline capture
 
-> **Status note (2026-08-08):** Offline Harvest draft capture and first
-> submission are now **implemented** under [ADR-009](../decisions/ADR-009-harvest-offline-synchronization.md).
-> The text below is the historical proposal preserved for context; it is no
-> longer a forward-looking proposal.
+Users first prepare the active FarmUnit reference list while connected. New
+drafts and complete values are then saved in owner-scoped IndexedDB storage.
+Explicit submission creates one durable `submit_harvest_snapshot` operation with
+a stable operation UUID and client-generated HarvestRecord UUID. “Saved on this
+device. Waiting to sync.” never means official submission.
 
-The original proposal was: a concrete design for offline Harvest capture **proposed but not implemented** requiring explicit Koranco approval before any code was written (see [ADR-009](../decisions/ADR-009-harvest-offline-synchronization.md) and [Harvest offline synchronization (proposed design)](../architecture/harvest-offline-sync.md)).
+On reconnection, `POST /api/v1/harvest-records/sync` fully revalidates the actor,
+permission, FarmUnit, quantity, unit, note, and version before invoking the
+normal Harvest submission path. Operation UUID provides retry idempotency;
+HarvestRecord UUID provides equivalence. FarmUnit plus date is never treated as
+a duplicate key because multiple legitimate records may share both.
 
-The proposal would make **only new draft capture and first submission** available offline. Submitted-record correction stays online-only, along with Farm Structure administration, account administration, reporting, and audit browsing. It keys transport idempotency on a stable operation UUID and record equivalence on the client-generated HarvestRecord UUID — deliberately **not** on FarmUnit + date, because multiple legitimate harvest events may share one FarmUnit and date. Every synced payload is fully re-validated by the API using the existing FarmUnit, quantity/unit, and lifecycle rules, and conflicts (inactive FarmUnit, ambiguous Field, stale version, unsupported unit/payload, revoked permission, cross-actor replay) resolve to explicit outcomes with no last-write-wins. Offline submission would be labelled "saved on this device, waiting to sync," never official submission.
+Outcomes are explicit: applied, already applied, conflict, or rejected. Response
+loss can be retried without creating a second record or submission audit. Stale
+server drafts, inactive or ambiguous FarmUnits, unsupported payloads, revoked
+permission, and cross-actor replay preserve the local values in a needs-attention
+state; nothing is silently overwritten or discarded.
+
+The local database is additively upgraded from Attendance schema v1 to field
+schema v2, preserving existing Attendance stores. Attendance and Harvest retain
+separate outboxes, sync engines, API endpoints, and processed-operation tables
+while sharing only the lease, owner-isolation, trigger, status, and service-
+worker update-gate primitives. See the detailed
+[offline protocol](../architecture/harvest-offline-sync.md) and
+[physical-device checklist](../operations/offline-harvest-field-test.md).

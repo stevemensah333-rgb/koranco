@@ -2,7 +2,8 @@ import Dexie, { type EntityTable } from "dexie";
 import type { AuthenticatedUser } from "@/lib/api/auth";
 import type { Worker } from "@/modules/workers/api";
 import type { AttendanceSession, DraftEntry } from "@/modules/attendance/api";
-import type { HarvestRecord } from "@/modules/harvest/api";
+import type { FarmUnit } from "@/modules/farm-structure/api";
+import type { HarvestRecord, HarvestUnit } from "@/modules/harvest/api";
 
 export const OFFLINE_LEASE_MS = 12 * 60 * 60 * 1000;
 export const LOCAL_SCHEMA_VERSION = 2;
@@ -68,7 +69,7 @@ export type OfflineLease = {
   harvestAllowed?: boolean;
 };
 
-class AttendanceOfflineDatabase extends Dexie {
+export class FieldOfflineDatabase extends Dexie {
   workers!: EntityTable<CachedWorker, "key">;
   drafts!: EntityTable<LocalAttendanceDraft, "id">;
   outbox!: EntityTable<OutboxOperation, "operationId">;
@@ -79,15 +80,19 @@ class AttendanceOfflineDatabase extends Dexie {
   harvestDrafts!: EntityTable<LocalHarvestDraft, "id">;
   harvestOutbox!: EntityTable<HarvestOutboxOperation, "operationId">;
 
-  constructor() {
-    super("koranco-attendance-offline");
-    // Maintain the existing attendance stores unchanged, and add Harvest stores additively.
-    this.version(2).stores({
+  constructor(name = "koranco-attendance-offline") {
+    super(name);
+    this.version(1).stores({
       workers: "key, ownerId, [ownerId+active]",
       drafts: "id, ownerId, [ownerId+state], updatedAt",
       outbox: "operationId, ownerId, [ownerId+state], [aggregateId+sequence]",
       leases: "ownerId, expiresAt",
-      // Harvest-specific stores
+    });
+    this.version(LOCAL_SCHEMA_VERSION).stores({
+      workers: "key, ownerId, [ownerId+active]",
+      drafts: "id, ownerId, [ownerId+state], updatedAt",
+      outbox: "operationId, ownerId, [ownerId+state], [aggregateId+sequence]",
+      leases: "ownerId, expiresAt",
       harvestFarmUnits: "key, ownerId, id, [ownerId+fetchedAt]",
       harvestDrafts: "id, ownerId, [ownerId+state], updatedAt",
       harvestOutbox:
@@ -96,7 +101,7 @@ class AttendanceOfflineDatabase extends Dexie {
   }
 }
 
-export const offlineDb = new AttendanceOfflineDatabase();
+export const offlineDb = new FieldOfflineDatabase();
 const nowIso = () => new Date().toISOString();
 
 export async function recordOfflineLease(
@@ -306,8 +311,28 @@ export async function pendingCount(ownerId: string) {
     .count();
 }
 
+export async function harvestPendingCount(ownerId: string) {
+  return offlineDb.harvestOutbox
+    .where("ownerId")
+    .equals(ownerId)
+    .filter((operation) => operation.state !== "needs_attention")
+    .count();
+}
+
+export async function pendingCounts(ownerId: string) {
+  const [attendance, harvest] = await Promise.all([
+    pendingCount(ownerId),
+    harvestPendingCount(ownerId),
+  ]);
+  return { attendance, harvest, total: attendance + harvest };
+}
+
 export async function hasPendingForOwner(ownerId: string) {
-  return (await pendingCount(ownerId)) > 0;
+  const [attendance, harvest] = await Promise.all([
+    offlineDb.outbox.where("ownerId").equals(ownerId).count(),
+    offlineDb.harvestOutbox.where("ownerId").equals(ownerId).count(),
+  ]);
+  return attendance + harvest > 0;
 }
 
 export async function hasAnyPendingWork() {
@@ -325,7 +350,7 @@ export type CachedFarmUnit = {
   id: string;
   code: string;
   name: string;
-  unit_type: string;
+  unit_type: FarmUnit["unit_type"];
   active: boolean;
   fetchedAt: string;
 };
@@ -335,8 +360,8 @@ export type LocalHarvestDraft = {
   ownerId: string;
   harvestDate: string;
   farmUnitId: string;
-  quantity: string; // keep as string to preserve decimal fidelity
-  unit: string;
+  quantity: string;
+  unit: HarvestUnit;
   notes: string | null;
   serverRecordId: string | null;
   baseServerVersion: number | null;
@@ -362,7 +387,7 @@ export type HarvestOutboxOperation = {
     harvest_date: string;
     farm_unit_id: string;
     quantity: string;
-    unit: string;
+    unit: HarvestUnit;
     notes: string | null;
     base_server_version: number | null;
   };
@@ -374,9 +399,9 @@ export type HarvestOutboxOperation = {
 
 export async function cacheFarmUnits(
   ownerId: string,
-  units: CachedFarmUnit[],
+  units: FarmUnit[],
 ): Promise<string> {
-  const fetchedAt = new Date().toISOString();
+  const fetchedAt = nowIso();
   await offlineDb.transaction("rw", offlineDb.harvestFarmUnits, async () => {
     await offlineDb.harvestFarmUnits.where("ownerId").equals(ownerId).delete();
     await offlineDb.harvestFarmUnits.bulkPut(
@@ -387,7 +412,7 @@ export async function cacheFarmUnits(
         code: u.code,
         name: u.name,
         unit_type: u.unit_type,
-        active: u.active,
+        active: u.status === "active",
         fetchedAt,
       })),
     );
@@ -408,7 +433,7 @@ export async function cacheServerHarvestDraft(
   const existing = await offlineDb.harvestDrafts.get(record.id);
   if (existing?.ownerId && existing.ownerId !== ownerId)
     throw new Error("Harvest belongs to another user");
-  const now = new Date().toISOString();
+  const now = nowIso();
   const local: LocalHarvestDraft = {
     id: record.id,
     ownerId,
@@ -434,14 +459,14 @@ export async function createLocalHarvestDraft(
 ): Promise<LocalHarvestDraft> {
   const lease = await validOfflineLease(ownerId, "harvest");
   if (!lease) throw new Error("Offline harvest authorization has expired");
-  const now = new Date().toISOString();
+  const now = nowIso();
   const draft: LocalHarvestDraft = {
     id: crypto.randomUUID(),
     ownerId,
-    harvestDate: new Date().toISOString().slice(0, 10),
+    harvestDate: now.slice(0, 10),
     farmUnitId: "",
-    quantity: "0.000",
-    unit: "",
+    quantity: "",
+    unit: "fruit_count",
     notes: null,
     serverRecordId: null,
     baseServerVersion: null,
@@ -455,10 +480,15 @@ export async function createLocalHarvestDraft(
   return draft;
 }
 
+export type HarvestDraftValues = Pick<
+  LocalHarvestDraft,
+  "harvestDate" | "farmUnitId" | "quantity" | "unit" | "notes"
+>;
+
 export async function saveLocalHarvestDraft(
   ownerId: string,
   id: string,
-  values: Partial<LocalHarvestDraft>,
+  values: HarvestDraftValues,
 ): Promise<LocalHarvestDraft> {
   const lease = await validOfflineLease(ownerId, "harvest");
   if (!lease) throw new Error("Offline harvest authorization has expired");
@@ -470,7 +500,7 @@ export async function saveLocalHarvestDraft(
   const updated = {
     ...draft,
     ...values,
-    updatedAt: new Date().toISOString(),
+    updatedAt: nowIso(),
     lastMessage: null,
   };
   await offlineDb.harvestDrafts.put(updated);
@@ -491,9 +521,12 @@ export async function queueHarvestSubmission(
       const draft = await offlineDb.harvestDrafts.get(id);
       if (!draft || draft.ownerId !== ownerId)
         throw new Error("Harvest is not available for this user");
+      if (!draft.farmUnitId || !draft.quantity)
+        throw new Error("Complete the Harvest record before submitting");
       const existing = await offlineDb.harvestOutbox
         .where("aggregateId")
         .equals(id)
+        .filter((operation) => operation.ownerId === ownerId)
         .first();
       if (existing) return existing;
       const operationId = crypto.randomUUID();
@@ -516,7 +549,7 @@ export async function queueHarvestSubmission(
           notes: draft.notes,
           base_server_version: draft.baseServerVersion,
         },
-        createdAt: new Date().toISOString(),
+        createdAt: nowIso(),
         attemptCount: 0,
         lastErrorCategory: null,
         lastMessage: null,
@@ -524,7 +557,7 @@ export async function queueHarvestSubmission(
       await offlineDb.harvestOutbox.add(operation);
       await offlineDb.harvestDrafts.update(id, {
         state: "pending_submission",
-        updatedAt: new Date().toISOString(),
+        updatedAt: nowIso(),
         lastMessage: "Saved on this device. Waiting to sync.",
       });
       return operation;

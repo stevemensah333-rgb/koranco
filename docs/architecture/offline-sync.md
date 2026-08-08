@@ -1,69 +1,136 @@
-# Offline attendance synchronization
+# Offline field synchronization
 
 ## Implemented policy
 
-Offline capability applies only to attendance capture. PostgreSQL remains authoritative. Administration, Worker/Farm Structure management, audit browsing, corrections, harvest, and reporting require an authenticated online connection.
+Offline capability applies to Attendance capture and new Harvest draft capture
+through first submission. PostgreSQL remains authoritative. Submitted-record
+corrections, administration, Worker/Farm Structure changes, audit browsing, and
+reporting require an authenticated online connection.
 
-### Authorization and ownership
+## Authorization and ownership
 
-Successful server validation stores a non-secret attendance lease containing only application-user ID, display name, attendance permission presence, validation time, and expiry. The lease lasts at most 12 hours. It contains no cookie, password, verifier, CSRF value, or reusable token. Expiry preserves existing work but blocks new local saves/submissions; synchronization requires online authentication.
+Successful server validation stores a non-secret 12-hour lease containing only
+the application-user ID, display name, domain permission flags, validation time,
+and expiry. It contains no cookie, password, verifier, CSRF value, or reusable
+token. Expiry preserves existing work but blocks new local saves and submissions;
+synchronization always requires online authentication.
 
-Every cached Worker, local draft, and operation carries the creator's application-user ID. Queries are owner-filtered. A replayed operation is also bound to its original server actor. Logging out leaves unsynced work intact after an explicit warning and suspends that user's offline lease; online reauthentication renews it. Another account cannot view, edit, or synchronize the preserved work.
+Every cached reference row, local draft, and operation carries its creator's
+application-user ID. Queries are owner-filtered. The server binds each operation
+to the authenticated actor on first ingestion and rejects cross-actor replay.
+Logging out warns when either domain has unsynchronized work, preserves the work,
+and suspends that user's lease. Another account cannot view, edit, or synchronize
+it.
 
-### IndexedDB schema version 1
+## IndexedDB schema version 2
 
-- `workers`: owner-qualified key, stable Worker UUID, current code/name/active state, refresh time.
-- `drafts`: client UUID, owner, date, server ID/base version when known, complete entries, local state, schema/payload version, bounded status message, local timestamps.
-- `outbox`: operation UUID, owner, aggregate UUID, explicit sequence, `submit_snapshot` type, versioned payload, retry/attention state and bounded diagnostics.
-- `leases`: owner, display name, validation/expiry timestamps, attendance permission flag.
+The existing `koranco-attendance-offline` database keeps its historical name to
+avoid a destructive copy migration.
 
-Local states are `editing`, `pending_submission`, `syncing`, `synced`, and `needs_attention`. Outbox states are `pending`, `syncing`, and `needs_attention`. Network/time-out/transient failure returns an operation to pending. Authentication expiry remains pending and requests same-user login. Permission revocation, unsupported payloads, and semantic conflicts require attention.
+Version 1 Attendance stores remain unchanged:
 
-### Protocol version 1
+- `workers`: owner-qualified Worker reference cache;
+- `drafts`: owner-scoped Attendance snapshots;
+- `outbox`: coarse `submit_snapshot` operations;
+- `leases`: owner and authorization lease metadata.
 
-`POST /api/v1/attendance-sessions/sync` accepts one coarse operation:
+Version 2 additively introduces:
 
-- stable operation UUID;
-- `submit_snapshot` operation type;
-- stable target/session UUID;
-- payload version;
-- explicit attendance date;
-- nullable base server version;
-- complete attendance entries.
+- `harvestFarmUnits`: owner-qualified active FarmUnit reference cache;
+- `harvestDrafts`: client-generated Harvest UUID, complete values, base server
+  version where applicable, local state, timestamps, and bounded message;
+- `harvestOutbox`: stable `submit_harvest_snapshot` operations with retry and
+  attention state.
 
-Results are `applied`, `already_applied`, `conflict`, or `rejected`. HTTP 401 means authentication is required; HTTP 403 means the authenticated account lacks permission. PostgreSQL stores processed results under a unique operation ID. The server serializes concurrent identical operations, rejects cross-actor replay, and invokes the normal attendance create/update/submit functions. Official audit events occur only on server acceptance and retain the authenticated human actor.
+A tested v1-to-v2 upgrade preserves existing Attendance data. Local states are
+`editing`, `pending_submission`, `syncing`, `synced`, and `needs_attention`.
+Outbox states are `pending`, `syncing`, and `needs_attention`.
 
-A submitted target with the exact same date, Workers, statuses, and times reconciles as already applied. A material difference conflicts. A stale server draft, inactive Worker, different owner, or equivalent-population competing session is never overwritten or silently merged.
+## Domain protocols
 
-### Reference preparation and connectivity
+### Attendance
 
-An explicit preparation action fetches all active Workers in paginated API requests and transactionally replaces that user's cached roster. The UI displays the refresh time and does not imply freshness while disconnected. Server validation remains decisive if a cached Worker later becomes inactive.
+`POST /api/v1/attendance-sessions/sync` accepts one complete Attendance snapshot
+with a stable operation UUID and target session UUID. Exact replays reconcile as
+already applied. A materially different submitted target, stale draft, inactive
+Worker, different owner, or equivalent-population competing session conflicts;
+nothing is silently merged or overwritten.
 
-Sync uses one request per submitted attendance snapshot. It runs on “Sync now,” connectivity restoration, and visibility restoration with no aggressive polling. Failed requests use user-driven/event-driven retries; a future measured need may add bounded timed backoff.
+### Harvest
 
-### Service worker and updates
+`POST /api/v1/harvest-records/sync` accepts one complete Harvest snapshot with:
 
-The service worker caches only same-origin static assets and attendance routes needed to reload field capture. It does not cache API responses, cookies, administration pages, security events, or arbitrary cross-origin responses. Network-first attendance caching refreshes compatible resources while connected.
+- stable operation and client-generated HarvestRecord UUIDs;
+- payload version and optional base server version;
+- operational date and FarmUnit UUID;
+- decimal quantity, provisional unit, and optional bounded note.
 
-Updates do not call `skipWaiting` automatically. The page checks IndexedDB: without pending work it permits activation; with pending work it displays that synchronization is required first. IndexedDB schema, application version, and payload version are explicit. Unsupported queued payloads are preserved in needs-attention state rather than destructively migrated.
+Operation UUID provides transport idempotency. HarvestRecord UUID provides
+record equivalence; FarmUnit plus date is deliberately not a duplicate key
+because multiple legitimate harvest events may share both. The API fully
+revalidates FarmUnit activity/specificity, quantity, unit, note, actor, and
+version before invoking the normal Harvest domain submission path.
+
+Both endpoints return `applied`, `already_applied`, `conflict`, or `rejected`.
+HTTP 401 leaves work pending for same-user authentication. Permission revocation,
+unsupported payloads, stale or changed records, inactive/ambiguous FarmUnits,
+and other semantic conflicts preserve the payload in `needs_attention`. There
+is no last-write-wins behavior.
+
+Processed results are durable in separate Attendance and Harvest PostgreSQL
+tables under unique operation IDs. The server serializes concurrent identical
+operations. Official audit events occur only on server acceptance and retain the
+authenticated human actor. A generic command bus or synchronization framework is
+intentionally not introduced.
+
+## Reference preparation and connectivity
+
+Users explicitly prepare reference data while connected: active Workers for
+Attendance and active FarmUnits for Harvest. Each owner-scoped cache is replaced
+transactionally and the UI reports refresh time. Cached status is not treated as
+authoritative; the API revalidates references during synchronization.
+
+Separate domain sync engines run on explicit “Sync now,” connectivity
+restoration, and visibility restoration. A combined status surface reports
+pending counts. Network and timeout failures return operations to pending
+without data loss; retries are event- or user-driven rather than aggressively
+polled.
+
+## Service worker and updates
+
+The service worker caches only same-origin static assets and Attendance/Harvest
+field routes needed to reopen field capture. It never caches API responses,
+cookies, administration pages, security events, or arbitrary cross-origin
+responses.
+
+Updates do not call `skipWaiting` automatically. Activation is held while either
+domain has local operations, including needs-attention work. Payload and local
+schema versions are explicit; unsupported work is preserved rather than
+silently discarded.
 
 ## Security and recovery limits
 
-IndexedDB is readable by JavaScript executing in the application origin, so XSS prevention, dependency review, CSP/deployment hardening, device access control, and minimal cached personal data matter. Local payloads are untrusted and fully revalidated by the API. Browser storage is not encrypted by this application and should not be treated as a backup.
+IndexedDB is readable by JavaScript executing in the application origin, so XSS
+prevention, dependency review, deployment hardening, device access control, and
+minimal cached data matter. Browser storage is not encrypted by this application
+and is not a backup.
 
-Storage clearing, eviction, private browsing, device loss, browser uninstall, or physical access can lose or expose unsynced records. Training must prioritize prompt synchronization. No automated Manager takeover of another user's stranded queue exists.
+Storage clearing, eviction, private browsing, device loss, browser uninstall,
+or physical access can lose or expose unsynchronized records. Training must
+prioritize prompt synchronization. No automated Manager takeover of another
+user's stranded queue exists.
+
+See [ADR-008](../decisions/ADR-008-attendance-offline-synchronization.md),
+[ADR-009](../decisions/ADR-009-harvest-offline-synchronization.md), the detailed
+[Harvest protocol](harvest-offline-sync.md), and the physical-device field-test
+checklists for [Attendance](../operations/offline-attendance-field-test.md) and
+[Harvest](../operations/offline-harvest-field-test.md).
 
 ## Remaining Koranco operational decisions
 
-- Approved shared-device practice, screen-lock expectations, and physical custody.
-- Recovery/reconciliation authority for a disabled user's stranded work.
-- Supported phone/browser matrix and acceptable disconnected duration after field trials.
-- Processed-operation and local-confirmed-record retention periods.
+- Approved shared-device practice, screen-lock expectations, and custody.
+- Recovery authority for a disabled user's stranded work.
+- Supported phone/browser matrix and acceptable disconnected duration.
+- Final local and processed-operation retention periods.
 - Whether installations need a managed device identifier.
 - Incident response for device loss and browser-storage clearing.
-
-## Future Harvest integration
-
-Harvest is intentionally online-only **today**. A future approved phase should reuse the attendance system's owner scope, authorization lease, stable operation ID, client-compatible aggregate UUID, payload version, durable outbox states, result categories, actor-bound replay, and server-side processed-operation record. It must define Harvest-specific snapshot equality and conflict rules and must not put Harvest payloads into the attendance endpoint or copy a second synchronization engine. No shared extraction is justified until that protocol is designed and tested.
-
-A concrete protocol for that future phase is now **proposed but not yet implemented** in [ADR-009](../decisions/ADR-009-harvest-offline-synchronization.md) and detailed in [Harvest offline synchronization (proposed design)](harvest-offline-sync.md). It keys idempotency on a stable operation UUID and equivalence on a client-generated HarvestRecord UUID (never FarmUnit + date, since multiple legitimate harvests may share a FarmUnit/date), adds a Harvest-specific `harvest_sync_operations` table and `POST /api/v1/harvest-records/sync` endpoint rather than generalizing attendance, and extends the Dexie schema additively (version 1 → 2) so existing attendance drafts, worker cache, outbox, and leases survive. Nothing in this repository implements it, and it requires explicit Koranco approval before any implementation phase begins.

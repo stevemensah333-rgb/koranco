@@ -19,7 +19,8 @@ def main() -> None:
     with SessionFactory.begin() as db:
         db.execute(
             text(
-                "TRUNCATE harvest_records, attendance_sync_operations, attendance_entries, "
+                "TRUNCATE harvest_sync_operations, harvest_records, "
+                "attendance_sync_operations, attendance_entries, "
                 "attendance_sessions, "
                 "operational_audit_events, farm_units, workers, security_events, "
                 "authentication_login_attempts, application_sessions, "
