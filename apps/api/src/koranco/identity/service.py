@@ -41,6 +41,7 @@ def record_security_event(
     user: ApplicationUser | None,
     request_id: str | None,
     subject: ApplicationUser | None = None,
+    details: dict[str, object] | None = None,
 ) -> None:
     session.add(
         SecurityEvent(
@@ -48,6 +49,7 @@ def record_security_event(
             user_id=user.id if user else None,
             subject_user_id=subject.id if subject else None,
             request_id=request_id,
+            details=details,
         )
     )
 

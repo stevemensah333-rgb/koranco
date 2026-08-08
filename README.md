@@ -4,7 +4,7 @@ Koranco is a production-oriented system for digitizing priority operations at Ko
 
 ## Project status
 
-The repository contains the runnable technical foundation, visual system, application-managed authentication, confirmed role/account administration, Worker register, Farm Structure register, production-oriented online/offline attendance capture, and append-only operational audit foundation. Harvest, reporting, and other later workflows have not started.
+The repository contains the runnable technical foundation, visual system, application-managed authentication, confirmed role/account administration, Worker register, Farm Structure register, production-oriented online/offline attendance capture, online and offline Harvest, append-only operational audit foundation, and an operational reporting and management overview phase (Overview, Attendance report, Harvest report, and Manager-only CSV export). Deferred workflows (inventory, payroll, full traceability, AI/ML) remain unstarted.
 
 ## Architecture
 
@@ -105,6 +105,7 @@ The guarded setup creates/resets only `koranco_e2e`; never point the E2E seeder 
 
 - [Product scope](docs/product/product-scope.md)
 - [Online attendance](docs/product/attendance.md)
+- [Reporting and operational overview](docs/product/reporting.md)
 - [Unresolved requirements](docs/product/unresolved-requirements.md)
 - [Architecture overview](docs/architecture/overview.md)
 - [Domain boundaries](docs/architecture/domain-boundaries.md)

@@ -67,8 +67,8 @@ These questions require confirmation from accountable Koranco stakeholders. They
 
 ## Offline operation
 
-- Attendance capture is the only implemented offline workflow. Harvest and all corrections/management functions remain online-only.
-- Offline Harvest capture is **proposed but not approved or implemented**; see [ADR-009](../decisions/ADR-009-harvest-offline-synchronization.md) and [Harvest offline synchronization (proposed design)](../architecture/harvest-offline-sync.md). Its acceptance and the open questions it lists (is offline Harvest required and for which roles/blocks; unit-set confirmation; lease duration; processed-operation retention; stranded-queue reconciliation authority; per-domain lease permission flags) require accountable Koranco decisions before implementation.
+- Attendance capture is an implemented offline workflow. Offline Harvest capture (draft + first submission) is **also implemented** under [ADR-009](../decisions/ADR-009-harvest-offline-synchronization.md); submitted-record correction, Farm Structure administration, account administration, reporting, and audit browsing remain online-only.
+- The open questions ADR-009 lists (is offline Harvest required and for which roles/blocks; unit-set confirmation; lease duration; processed-operation retention; stranded-queue reconciliation authority; per-domain lease permission flags) remain open for accountable Koranco confirmation and are not inferred as answered.
 - The initial offline authorization lease is 12 hours. Is that suitable after field testing?
 - Which devices, operating systems, and browser versions must be supported?
 - Are devices assigned or shared, and how is loss or theft handled?
@@ -82,7 +82,9 @@ These questions require confirmation from accountable Koranco stakeholders. They
 
 ## Reporting and exports
 
-- Which operational decisions and management questions must reports answer?
+A restrained reporting and management overview phase has begun (see
+[reporting](reporting.md) and [ADR-010](../decisions/ADR-010-management-reporting.md)).
+The following questions remain open and are not inferred as answered:
 - What are the approved definitions for each metric?
 - Which groupings, filters, comparisons, and reconciliation paths are required?
 - Must any current paper or spreadsheet reports be reproduced?

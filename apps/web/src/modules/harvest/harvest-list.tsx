@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ManagementShell } from "@/components/shells/management-shell";
+import { managementNavigation } from "@/components/shells/management-navigation";
 import { Alert } from "@/components/ui/alert";
 import { LoadingIndicator } from "@/components/ui/loading-indicator";
 import { PageHeader } from "@/components/ui/page-header";
@@ -49,12 +50,7 @@ export function HarvestList() {
         });
     }
   }, [user, status, unit, dateFrom, dateTo]);
-  const nav = [
-    { href: "/", label: "System status" },
-    { href: "/harvest", label: "Harvest", current: true },
-    { href: "/attendance", label: "Attendance" },
-    { href: "/farm-structure", label: "Farm structure" },
-  ];
+  const nav = managementNavigation(user, "/harvest");
   if (!user && !error)
     return (
       <main className="auth-loading">

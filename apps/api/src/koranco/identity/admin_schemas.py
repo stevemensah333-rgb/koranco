@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -52,6 +53,7 @@ class SecurityEventResponse(BaseModel):
     event_type: str
     actor_user_id: uuid.UUID | None
     subject_user_id: uuid.UUID | None
+    details: dict[str, Any] | None = None
     occurred_at: datetime
 
 

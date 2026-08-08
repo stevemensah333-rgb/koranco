@@ -11,6 +11,7 @@ from koranco.farm_structure.routes import router as farm_structure_router
 from koranco.harvest.routes import router as harvest_router
 from koranco.identity.admin_routes import router as administration_router
 from koranco.identity.routes import router as identity_router
+from koranco.reports.routes import router as reports_router
 from koranco.workers.routes import router as workers_router
 
 settings = get_settings()
@@ -39,3 +40,4 @@ app.include_router(workers_router)
 app.include_router(farm_structure_router)
 app.include_router(attendance_router)
 app.include_router(harvest_router)
+app.include_router(reports_router)

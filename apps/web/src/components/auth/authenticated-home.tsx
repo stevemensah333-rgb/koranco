@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { ManagementShell } from "@/components/shells/management-shell";
+import { managementNavigation } from "@/components/shells/management-navigation";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { LoadingIndicator } from "@/components/ui/loading-indicator";
@@ -149,27 +150,7 @@ export function AuthenticatedHome() {
 
   return (
     <ManagementShell
-      navigation={[
-        { current: true, href: "/", label: "System status" },
-        ...(user.permissions.includes("workers.read")
-          ? [{ href: "/workers", label: "Workers" }]
-          : []),
-        ...(user.permissions.includes("attendance.read")
-          ? [{ href: "/attendance", label: "Attendance" }]
-          : []),
-        ...(user.permissions.includes("harvest.read")
-          ? [{ href: "/harvest", label: "Harvest" }]
-          : []),
-        ...(user.permissions.includes("farm_structure.read")
-          ? [{ href: "/farm-structure", label: "Farm structure" }]
-          : []),
-        ...(user.permissions.includes("users.read")
-          ? [
-              { href: "/admin/users", label: "Users" },
-              { href: "/admin/security-events", label: "Security events" },
-            ]
-          : []),
-      ]}
+      navigation={managementNavigation(user, "/")}
       utility={
         <div className="session-utility">
           <span className="session-identity">{user.display_name}</span>

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { ManagementShell } from "@/components/shells/management-shell";
+import { managementNavigation } from "@/components/shells/management-navigation";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { LoadingIndicator } from "@/components/ui/loading-indicator";
@@ -118,13 +119,7 @@ export function AttendanceList() {
       setCreating(false);
     }
   }
-  const nav = [
-    { href: "/", label: "System status" },
-    { href: "/attendance", label: "Attendance", current: true },
-    ...(user?.permissions.includes("workers.read")
-      ? [{ href: "/workers", label: "Workers" }]
-      : []),
-  ];
+  const nav = managementNavigation(user, "/attendance");
   if (!user && !error)
     return (
       <main className="auth-loading">
