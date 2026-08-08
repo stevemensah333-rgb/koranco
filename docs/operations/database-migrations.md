@@ -75,17 +75,20 @@ for `application_users.login_identifier` and
 metadata only because the deployed schema already enforced the intended
 constraints; no risk-bearing schema migration was required.
 
-CI runs `alembic check` after upgrading a fresh PostgreSQL database. A proposed
-schema operation now fails the backend job and must be resolved deliberately:
-add/review a forward migration for an intended schema change, or align incorrect
-model metadata with the existing authoritative migration history.
+`alembic check` is currently clean after upgrading a fresh PostgreSQL database.
+A proposed schema operation must be resolved deliberately: add and review a
+forward migration for an intended schema change, or align incorrect model
+metadata with the existing authoritative migration history.
 
 Do not interpret a clean `alembic current` as proof there is no drift;
-`alembic check` is the separate enforced comparison.
+`alembic check` is the separate comparison.
 
 ## CI
 
-CI runs `uv run alembic upgrade head` and `uv run alembic check` against a fresh
-PostgreSQL 17 service before the test suite. A dedicated
-`backup-restore-drill` job proves a `pg_dump` / `pg_restore` round trip (see
-[backup-and-recovery](backup-and-recovery.md)).
+CI runs `uv run alembic upgrade head` against a fresh PostgreSQL 17 service
+before the test suite. The documented `alembic check` gate and dedicated
+`backup-restore-drill` job are not present in `.github/workflows/ci.yml`: the
+current GitHub App lacks the `workflows` permission and GitHub rejected the push
+that re-applied them. A maintainer with that permission should add both gates.
+Until then, run `uv run alembic check` and the
+[backup/restore drill](backup-and-recovery.md#restore-drill) before release.

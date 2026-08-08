@@ -4,7 +4,7 @@ Koranco is a production-oriented system for digitizing priority operations at Ko
 
 ## Project status
 
-The repository contains the runnable technical foundation, visual system, application-managed authentication, confirmed role/account administration, Worker register, Farm Structure register, production-oriented online/offline attendance capture, online and offline Harvest, append-only operational audit foundation, an operational reporting and management overview phase (Overview, Attendance report, Harvest report, and Manager-only CSV export), and a Backup, Recovery, and Production Operations phase (provisional backup policy, portable `pg_dump`/`pg_restore` tooling, a restore drill, migration/incident/production-readiness runbooks, and CI backup-restore verification). Deferred workflows (inventory, payroll, full traceability, AI/ML) remain unstarted.
+The repository contains the runnable technical foundation, visual system, application-managed authentication, confirmed role/account administration, Worker register, Farm Structure register, production-oriented online/offline attendance capture, online and offline Harvest, append-only operational audit foundation, an operational reporting and management overview phase (Overview, Attendance report, Harvest report, and Manager-only CSV export), and a Backup, Recovery, and Production Operations phase (provisional backup policy, portable `pg_dump`/`pg_restore` tooling, a restore drill, migration/incident/production-readiness runbooks, and a tested backup/restore drill). Deferred workflows (inventory, payroll, full traceability, AI/ML) remain unstarted.
 
 ## Architecture
 
