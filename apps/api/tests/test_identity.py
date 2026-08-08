@@ -17,7 +17,12 @@ from koranco.identity.models import (
 )
 from koranco.identity.passwords import hash_password, password_hash_needs_upgrade, verify_password
 from koranco.identity.permissions import Role, permissions_for_role
-from koranco.identity.security import SESSION_COOKIE, hash_token, normalize_login_identifier
+from koranco.identity.security import (
+    CSRF_COOKIE,
+    SESSION_COOKIE,
+    hash_token,
+    normalize_login_identifier,
+)
 from koranco.main import app
 
 TRUSTED_ORIGIN = "http://test"
@@ -105,6 +110,7 @@ def test_successful_login_sets_hardened_cookie_and_never_exposes_hash() -> None:
 
     assert response.status_code == 200
     assert response.json()["login_identifier"] == "operator"
+    assert response.json()["csrf_token"] == response.cookies[CSRF_COOKIE]
     assert "password_hash" not in response.text
     assert "a long example password" not in response.text
     session_cookie = next(
@@ -174,16 +180,18 @@ def test_authorized_session_logout_and_revocation() -> None:
 
     async def flow() -> tuple[Response, Response, Response]:
         async with AsyncClient(transport=ASGITransport(app=app), base_url=TRUSTED_ORIGIN) as client:
-            await client.post(
+            login_response = await client.post(
                 "/api/v1/auth/login",
                 headers={"Origin": TRUSTED_ORIGIN},
                 json=login_payload(),
             )
             allowed = await client.get("/api/v1/system/status")
-            csrf = client.cookies["koranco_csrf"]
             logged_out = await client.post(
                 "/api/v1/auth/logout",
-                headers={"Origin": TRUSTED_ORIGIN, "X-CSRF-Token": csrf},
+                headers={
+                    "Origin": TRUSTED_ORIGIN,
+                    "X-CSRF-Token": login_response.json()["csrf_token"],
+                },
             )
             rejected = await client.get("/api/v1/auth/session")
             return allowed, logged_out, rejected
@@ -191,6 +199,11 @@ def test_authorized_session_logout_and_revocation() -> None:
     allowed, logged_out, rejected = asyncio.run(flow())
     assert allowed.status_code == 200
     assert logged_out.status_code == 204
+    deletion_cookies = logged_out.headers.get_list("set-cookie")
+    assert len(deletion_cookies) == 2
+    assert any(value.startswith(f"{SESSION_COOKIE}=") for value in deletion_cookies)
+    assert any(value.startswith(f"{CSRF_COOKIE}=") for value in deletion_cookies)
+    assert all("Max-Age=0" in value and "Path=/" in value for value in deletion_cookies)
     assert rejected.status_code == 401
     with SessionFactory() as session:
         stored = session.scalar(select(ApplicationSession))

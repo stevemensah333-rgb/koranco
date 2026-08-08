@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
 from koranco.config.settings import Settings
+from koranco.identity.cookies import clear_auth_cookies, set_auth_cookies
 from koranco.identity.security import CSRF_COOKIE, SESSION_COOKIE
 
 
@@ -12,26 +13,17 @@ def create_test_app(settings_override: Settings) -> FastAPI:
 
     @test_app.post("/test-login")
     def test_login(response: Response) -> dict[str, str]:
-        max_age = settings_override.session_ttl_hours * 60 * 60
-        response.set_cookie(
-            SESSION_COOKIE,
-            "dummy_session_token",
-            httponly=True,
-            secure=settings_override.secure_cookies,
-            samesite=settings_override.cookie_samesite,
-            max_age=max_age,
-            path="/",
-        )
-        response.set_cookie(
-            CSRF_COOKIE,
-            "dummy_csrf_token",
-            httponly=False,
-            secure=settings_override.secure_cookies,
-            samesite=settings_override.cookie_samesite,
-            max_age=max_age,
-            path="/",
+        set_auth_cookies(
+            response,
+            settings_override,
+            session_token="dummy_session_token",
+            csrf_token="dummy_csrf_token",
         )
         return {"status": "ok"}
+
+    @test_app.post("/test-logout")
+    def test_logout(response: Response) -> None:
+        clear_auth_cookies(response, settings_override)
 
     return test_app
 
@@ -102,6 +94,51 @@ def test_cookie_samesite_configured_none_emits_samesite_none() -> None:
     assert "samesite=none" in csrf_cookie.lower()
     assert "httponly" not in csrf_cookie.lower()  # CSRF remains non-HttpOnly
     assert "secure" in csrf_cookie.lower()
+
+
+def test_logout_deletion_preserves_default_cookie_policy() -> None:
+    settings = Settings(
+        environment="development",
+        database_url="postgresql+psycopg://localhost/koranco",
+        csrf_trusted_origins=["http://localhost:3000"],
+        _env_file=None,
+    )
+    response = TestClient(create_test_app(settings)).post("/test-logout")
+    cookies = response.headers.get_list("set-cookie")
+
+    assert len(cookies) == 2
+    session_cookie = next(c for c in cookies if c.startswith(f"{SESSION_COOKIE}="))
+    csrf_cookie = next(c for c in cookies if c.startswith(f"{CSRF_COOKIE}="))
+    for cookie in cookies:
+        assert "Max-Age=0" in cookie
+        assert "Path=/" in cookie
+        assert "SameSite=lax" in cookie
+        assert "Secure" not in cookie
+    assert "HttpOnly" in session_cookie
+    assert "HttpOnly" not in csrf_cookie
+
+
+def test_logout_deletion_supports_cross_site_samesite_none() -> None:
+    settings = Settings(
+        environment="production",
+        database_url="postgresql+psycopg://localhost/koranco",
+        csrf_trusted_origins=["https://koranco.vercel.app"],
+        cookie_samesite="none",
+        _env_file=None,
+    )
+    response = TestClient(create_test_app(settings)).post("/test-logout")
+    cookies = response.headers.get_list("set-cookie")
+
+    assert len(cookies) == 2
+    session_cookie = next(c for c in cookies if c.startswith(f"{SESSION_COOKIE}="))
+    csrf_cookie = next(c for c in cookies if c.startswith(f"{CSRF_COOKIE}="))
+    for cookie in cookies:
+        assert "Max-Age=0" in cookie
+        assert "Path=/" in cookie
+        assert "SameSite=none" in cookie
+        assert "Secure" in cookie
+    assert "HttpOnly" in session_cookie
+    assert "HttpOnly" not in csrf_cookie
 
 
 def test_cookie_samesite_none_fails_safely_in_non_production() -> None:

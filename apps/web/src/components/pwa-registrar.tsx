@@ -2,7 +2,11 @@
 
 import { useEffect, useState } from "react";
 
-import { getCurrentSession } from "@/lib/api/auth";
+import {
+  getAuthenticatedClientSession,
+  getCurrentSession,
+  subscribeToClientSession,
+} from "@/lib/api/auth";
 import {
   hasAnyPendingWork,
   pendingCounts,
@@ -45,20 +49,30 @@ export function PwaRegistrar() {
 
   useEffect(() => {
     let active = false;
+    let signedOut = getAuthenticatedClientSession() === null;
     const trySync = async () => {
-      if (active) return;
+      if (active || signedOut) return;
       active = true;
       try {
         const user = await getCurrentSession();
+        if (signedOut) return;
         setPending(await pendingCounts(user.id));
         await Promise.all([syncAttendance(user.id), syncHarvest(user.id)]);
-        setPending(await pendingCounts(user.id));
+        if (!signedOut) setPending(await pendingCounts(user.id));
       } catch {
         // Domain screens explain authentication, connectivity, and attention states.
       } finally {
         active = false;
       }
     };
+    const unsubscribe = subscribeToClientSession((user) => {
+      signedOut = user === null;
+      if (signedOut) {
+        setPending({ attendance: 0, harvest: 0, total: 0 });
+      } else {
+        void trySync();
+      }
+    });
     const online = () => void trySync();
     const visible = () => {
       if (document.visibilityState === "visible") void trySync();
@@ -67,6 +81,7 @@ export function PwaRegistrar() {
     window.addEventListener("online", online);
     document.addEventListener("visibilitychange", visible);
     return () => {
+      unsubscribe();
       window.removeEventListener("online", online);
       document.removeEventListener("visibilitychange", visible);
     };

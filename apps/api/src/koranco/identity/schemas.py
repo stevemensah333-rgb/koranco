@@ -15,3 +15,10 @@ class AuthenticatedUserResponse(BaseModel):
     permissions: list[str]
     role: str
     password_change_required: bool
+
+
+class AuthenticatedSessionResponse(AuthenticatedUserResponse):
+    # The cross-origin web client cannot read a host-only cookie set by the API.
+    # CORS protects this response; the backend still requires the matching cookie,
+    # trusted Origin, and session-bound header token on every authenticated write.
+    csrf_token: str

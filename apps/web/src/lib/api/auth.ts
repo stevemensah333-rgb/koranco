@@ -1,4 +1,4 @@
-import { apiRequest } from "./client";
+import { ApiError, apiRequest } from "./client";
 
 export type AuthenticatedUser = {
   id: string;
@@ -9,17 +9,53 @@ export type AuthenticatedUser = {
   password_change_required: boolean;
 };
 
-function readCsrfToken(): string {
-  if (typeof document === "undefined") return "";
-  const prefix = "koranco_csrf=";
-  const cookie = document.cookie
-    .split("; ")
-    .find((item) => item.startsWith(prefix));
-  return cookie ? decodeURIComponent(cookie.slice(prefix.length)) : "";
+type AuthenticatedSessionResponse = AuthenticatedUser & {
+  csrf_token: string;
+};
+
+type ClientSession = AuthenticatedUser | null | undefined;
+type ClientSessionListener = (user: AuthenticatedUser | null) => void;
+
+const LOGOUT_TIMEOUT_MS = 30_000;
+const sessionListeners = new Set<ClientSessionListener>();
+let clientSession: ClientSession;
+let csrfToken = "";
+
+function updateAuthenticatedClientSession(
+  response: AuthenticatedSessionResponse,
+): AuthenticatedUser {
+  const { csrf_token, ...user } = response;
+  csrfToken = csrf_token;
+  clientSession = user;
+  sessionListeners.forEach((listener) => listener(user));
+  return user;
+}
+
+export function clearAuthenticatedClientSession(): void {
+  csrfToken = "";
+  clientSession = null;
+  sessionListeners.forEach((listener) => listener(null));
+}
+
+export function getAuthenticatedClientSession(): ClientSession {
+  return clientSession;
+}
+
+export function subscribeToClientSession(
+  listener: ClientSessionListener,
+): () => void {
+  sessionListeners.add(listener);
+  return () => sessionListeners.delete(listener);
 }
 
 export function csrfHeaders(): Record<string, string> {
-  return { "X-CSRF-Token": readCsrfToken() };
+  if (!csrfToken) {
+    throw new ApiError(
+      "The security token for this session is unavailable. Verify the session and try again.",
+      0,
+    );
+  }
+  return { "X-CSRF-Token": csrfToken };
 }
 
 async function preserveOfflineAuthorization(user: AuthenticatedUser) {
@@ -39,28 +75,63 @@ export async function login(
   loginIdentifier: string,
   password: string,
 ): Promise<AuthenticatedUser> {
-  const user = await apiRequest<AuthenticatedUser>("/api/v1/auth/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ login_identifier: loginIdentifier, password }),
-  });
-  return preserveOfflineAuthorization(user);
+  const response = await apiRequest<AuthenticatedSessionResponse>(
+    "/api/v1/auth/login",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ login_identifier: loginIdentifier, password }),
+    },
+  );
+  return preserveOfflineAuthorization(
+    updateAuthenticatedClientSession(response),
+  );
 }
 
 export async function getCurrentSession(
   signal?: AbortSignal,
 ): Promise<AuthenticatedUser> {
-  const user = await apiRequest<AuthenticatedUser>("/api/v1/auth/session", {
-    signal,
-  });
-  return preserveOfflineAuthorization(user);
+  try {
+    const response = await apiRequest<AuthenticatedSessionResponse>(
+      "/api/v1/auth/session",
+      { signal },
+    );
+    return preserveOfflineAuthorization(
+      updateAuthenticatedClientSession(response),
+    );
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) {
+      clearAuthenticatedClientSession();
+    }
+    throw error;
+  }
 }
 
-export function logout(): Promise<void> {
-  return apiRequest("/api/v1/auth/logout", {
-    method: "POST",
-    headers: csrfHeaders(),
-  });
+export async function logout(): Promise<void> {
+  const controller = new AbortController();
+  const timeout = globalThis.setTimeout(
+    () => controller.abort(),
+    LOGOUT_TIMEOUT_MS,
+  );
+  try {
+    await apiRequest<void>("/api/v1/auth/logout", {
+      method: "POST",
+      headers: csrfHeaders(),
+      signal: controller.signal,
+    });
+    clearAuthenticatedClientSession();
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.name === "AbortError" &&
+      controller.signal.aborted
+    ) {
+      throw new ApiError("The sign-out request timed out. Try again.", 0);
+    }
+    throw error;
+  } finally {
+    globalThis.clearTimeout(timeout);
+  }
 }
 
 export function getProtectedSystemStatus(
