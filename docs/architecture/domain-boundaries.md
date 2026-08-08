@@ -32,6 +32,8 @@ Provides tamper-resistant history for significant actions and corrections across
 
 The implemented boundary coordinates durable delivery, owner isolation, idempotency, sync visibility, and conflicts only for attendance capture. Attendance-specific ingestion remains beside the attendance domain and invokes its rules. It is not a universal synchronization framework and does not decide domain conflicts independently.
 
+A future offline Harvest phase is **proposed but not implemented** in [ADR-009](../decisions/ADR-009-harvest-offline-synchronization.md). It would follow this same rule: Harvest ingestion sits beside the Harvest domain with its own processed-operation table and endpoint, sharing only transport primitives (lease, owner isolation, connectivity, outbox state machine, update gate, status surface). Generalizing into a shared synchronization framework is deliberately deferred until a third offline domain demonstrates the need.
+
 ### Reporting
 
 Produces approved operational and management views from authoritative domain data. It does not redefine source facts or invent metrics.

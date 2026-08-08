@@ -68,6 +68,7 @@ These questions require confirmation from accountable Koranco stakeholders. They
 ## Offline operation
 
 - Attendance capture is the only implemented offline workflow. Harvest and all corrections/management functions remain online-only.
+- Offline Harvest capture is **proposed but not approved or implemented**; see [ADR-009](../decisions/ADR-009-harvest-offline-synchronization.md) and [Harvest offline synchronization (proposed design)](../architecture/harvest-offline-sync.md). Its acceptance and the open questions it lists (is offline Harvest required and for which roles/blocks; unit-set confirmation; lease duration; processed-operation retention; stranded-queue reconciliation authority; per-domain lease permission flags) require accountable Koranco decisions before implementation.
 - The initial offline authorization lease is 12 hours. Is that suitable after field testing?
 - Which devices, operating systems, and browser versions must be supported?
 - Are devices assigned or shared, and how is loss or theft handled?

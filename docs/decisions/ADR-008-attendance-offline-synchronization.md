@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-08-07
+- Related: [ADR-009](ADR-009-harvest-offline-synchronization.md) (Proposed) reuses these primitives for a future offline Harvest phase without generalizing this decision.
 
 ## Context
 
