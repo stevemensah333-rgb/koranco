@@ -4,7 +4,17 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Index, String, Text, func
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Index,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -18,10 +28,12 @@ class ApplicationUser(Base):
         CheckConstraint(
             "role IN ('manager', 'supervisor', 'worker')", name="ck_application_users_role"
         ),
+        UniqueConstraint("login_identifier"),
+        Index("ix_application_users_login_identifier", "login_identifier"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    login_identifier: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    login_identifier: Mapped[str] = mapped_column(String(64))
     display_name: Mapped[str] = mapped_column(String(120))
     password_hash: Mapped[str] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(16), default="active")

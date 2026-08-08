@@ -71,6 +71,7 @@ jobs:
       - run: uv run ruff check .
       - run: uv run mypy src tests
       - run: uv run alembic upgrade head
+      - run: uv run alembic check
       - run: uv run pytest
 
   attendance-e2e:
@@ -101,3 +102,41 @@ jobs:
       - run: docker compose up -d db
       - run: pnpm e2e
         working-directory: apps/web
+
+  backup-restore-drill:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: postgres
+          POSTGRES_PASSWORD: koranco_test
+          POSTGRES_USER: koranco_test
+        options: >-
+          --health-cmd "pg_isready -U koranco_test -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+        ports:
+          - 5432:5432
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: "5432"
+      PGUSER: koranco_test
+      PGPASSWORD: koranco_test
+      KORANCO_BACKUP_DIR: /tmp/koranco-drill-backups
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.11.29"
+          enable-cache: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: uv sync --locked --all-groups
+        working-directory: apps/api
+      - name: Install PostgreSQL client tools for pg_dump/pg_restore
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client
+      - name: Run backup/restore drill
+        run: bash scripts/backup-restore-drill.sh

@@ -15,7 +15,7 @@ export default defineConfig({
   webServer: [
     {
       command:
-        "KORANCO_ENVIRONMENT=test KORANCO_DATABASE_URL=postgresql+psycopg://koranco_dev:koranco_dev@localhost:5432/koranco_e2e KORANCO_CORS_ORIGINS='[\"http://127.0.0.1:3100\"]' KORANCO_CSRF_TRUSTED_ORIGINS='[\"http://127.0.0.1:3100\"]' PYTHONPATH=src UV_CACHE_DIR=/private/tmp/koranco-uv-cache uv run uvicorn koranco.main:app --host 127.0.0.1 --port 8100 --no-access-log",
+        "KORANCO_ENVIRONMENT=test KORANCO_DATABASE_URL=postgresql+psycopg://koranco_dev:koranco_dev@localhost:5432/koranco_e2e KORANCO_CORS_ORIGINS='[\"http://127.0.0.1:3100\"]' KORANCO_CSRF_TRUSTED_ORIGINS='[\"http://127.0.0.1:3100\"]' PYTHONPATH=src UV_CACHE_DIR=/tmp/koranco-uv-cache uv run uvicorn koranco.main:app --host 127.0.0.1 --port 8100 --no-access-log",
       cwd: "../api",
       url: "http://127.0.0.1:8100/api/v1/health",
       reuseExistingServer: false,

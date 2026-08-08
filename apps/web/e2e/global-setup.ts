@@ -44,7 +44,7 @@ export default function globalSetup() {
     KORANCO_ENVIRONMENT: "test",
     KORANCO_DATABASE_URL: databaseUrl,
     PYTHONPATH: "src",
-    UV_CACHE_DIR: "/private/tmp/koranco-uv-cache",
+    UV_CACHE_DIR: "/tmp/koranco-uv-cache",
   };
   execFileSync("uv", ["run", "alembic", "upgrade", "head"], {
     cwd: api,
