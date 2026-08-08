@@ -145,7 +145,7 @@ test("manager can correct a submitted harvest and see correction history", async
 
   await expect(page.getByText("Harvest correction recorded.")).toBeVisible();
   await expect(page.getByText(/corrected/)).toBeVisible();
-  await expect(page.getByLabel("Quantity")).toHaveValue("10");
+  await expect(page.getByLabel("Quantity")).toHaveValue("10.000");
   await expect(page.getByText(/Update quantity/)).toBeVisible();
 });
 
