@@ -62,7 +62,7 @@ def login(
         new_session.session_token,
         httponly=True,
         secure=settings.secure_cookies,
-        samesite="lax",
+        samesite=settings.cookie_samesite,
         max_age=max_age,
         path="/",
     )
@@ -71,7 +71,7 @@ def login(
         new_session.csrf_token,
         httponly=False,
         secure=settings.secure_cookies,
-        samesite="lax",
+        samesite=settings.cookie_samesite,
         max_age=max_age,
         path="/",
     )

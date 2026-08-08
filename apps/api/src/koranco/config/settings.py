@@ -1,7 +1,7 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 Environment = Literal["development", "test", "production"]
@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     session_ttl_hours: int = Field(default=12, ge=1, le=168)
     login_failure_limit: int = Field(default=5, ge=2, le=20)
     login_failure_window_minutes: int = Field(default=15, ge=1, le=60)
+    cookie_samesite: Literal["lax", "strict", "none"] = "lax"
 
     @field_validator("database_url")
     @classmethod
@@ -43,6 +44,14 @@ class Settings(BaseSettings):
         if not value or "*" in value:
             raise ValueError("csrf_trusted_origins must contain explicit origins")
         return value
+
+    @model_validator(mode="after")
+    def validate_cookie_security(self) -> "Settings":
+        if self.cookie_samesite == "none" and not self.secure_cookies:
+            raise ValueError(
+                "SameSite=None requires KORANCO_ENVIRONMENT=production to ensure cookies are Secure"
+            )
+        return self
 
     @property
     def expose_api_docs(self) -> bool:
