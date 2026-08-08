@@ -2,10 +2,12 @@ import "@testing-library/jest-dom/vitest";
 import "fake-indexeddb/auto";
 import { cleanup } from "@testing-library/react";
 import { afterEach } from "vitest";
+import { clearAuthenticatedClientSession } from "@/lib/api/auth";
 import { offlineDb } from "@/modules/attendance/offline/db";
 
 afterEach(async () => {
   cleanup();
+  clearAuthenticatedClientSession();
   await Promise.all([
     offlineDb.workers.clear(),
     offlineDb.drafts.clear(),

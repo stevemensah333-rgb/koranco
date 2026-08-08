@@ -10,10 +10,12 @@ Application users have a normalized login identifier, display name for UI/audit 
 
 Successful login creates independent random session and CSRF tokens. The browser receives:
 
-- `koranco_session`: HTTP-only, SameSite Lax, path `/`, Secure in production;
-- `koranco_csrf`: readable only so the frontend can echo it in the CSRF header, SameSite Lax, path `/`, Secure in production.
+- `koranco_session`: HTTP-only, configured SameSite policy, path `/`, Secure in production;
+- `koranco_csrf`: configured SameSite policy, path `/`, Secure in production.
 
-PostgreSQL stores SHA-256 token digests, not reusable raw values. Sessions expire after 12 hours by default. Logout sets `revoked_at` before clearing cookies. Expired, revoked, malformed, and unknown sessions receive the same authentication-required response. Disabled accounts cannot log in; an existing session is revoked and rejected on its next request.
+The login and session responses also return the CSRF token to the authenticated web client. This is necessary because a frontend on a Vercel host cannot read a host-only cookie belonging to a Render API host. The token remains bound to the server-side session digest and its matching API cookie; explicit trusted-Origin validation and credentialed CORS remain required. The client retains it only in memory and sends it in `X-CSRF-Token` for authenticated writes.
+
+PostgreSQL stores SHA-256 token digests, not reusable raw values. Sessions expire after 12 hours by default. Logout sets `revoked_at` before clearing both cookies with the same Path, Secure, HTTP-only, and configured SameSite attributes used at creation. Expired, revoked, malformed, and unknown sessions receive the same authentication-required response. Disabled accounts cannot log in; an existing session is revoked and rejected on its next request.
 
 Expired and revoked rows require periodic operational cleanup after retention requirements are approved. Cleanup must not erase security events or actor records.
 

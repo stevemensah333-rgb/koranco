@@ -106,19 +106,60 @@ describe("AuthenticatedHome", () => {
     await waitFor(() => expect(replace).toHaveBeenCalledWith("/login"));
   });
 
-  it("renders identity and logs out an authenticated user", async () => {
+  it("sends logout, clears authenticated UI, and redirects to login", async () => {
+    let resolveLogout: () => void = () => undefined;
     getCurrentSession.mockResolvedValue({
       id: "1",
       login_identifier: "operator",
       display_name: "Example Operator",
       permissions: ["system.status.read"],
+      role: "supervisor",
+      password_change_required: false,
     });
     getProtectedSystemStatus.mockResolvedValue({ status: "foundation" });
-    logout.mockResolvedValue(undefined);
+    logout.mockReturnValue(
+      new Promise<void>((resolve) => {
+        resolveLogout = resolve;
+      }),
+    );
     render(<AuthenticatedHome />);
 
     expect(await screen.findByText("Example Operator")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Sign out" }));
-    await waitFor(() => expect(replace).toHaveBeenCalledWith("/login"));
+    expect(
+      await screen.findByRole("button", { name: "Signing out…" }),
+    ).toBeDisabled();
+    expect(logout).toHaveBeenCalledOnce();
+
+    resolveLogout();
+    await waitFor(() => {
+      expect(replace).toHaveBeenCalledWith("/login");
+      expect(screen.queryByText("Example Operator")).not.toBeInTheDocument();
+      expect(screen.queryByText("Access confirmed")).not.toBeInTheDocument();
+    });
+  });
+
+  it("restores sign-out interaction and explains a failed logout", async () => {
+    getCurrentSession.mockResolvedValue({
+      id: "1",
+      login_identifier: "operator",
+      display_name: "Example Operator",
+      permissions: ["system.status.read"],
+      role: "supervisor",
+      password_change_required: false,
+    });
+    getProtectedSystemStatus.mockResolvedValue({ status: "foundation" });
+    logout.mockRejectedValue(new ApiError("CSRF validation failed", 403));
+    render(<AuthenticatedHome />);
+
+    expect(await screen.findByText("Example Operator")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Sign out" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "The server rejected the sign-out security check",
+    );
+    expect(screen.getByRole("button", { name: "Sign out" })).toBeEnabled();
+    expect(screen.getByText("Example Operator")).toBeInTheDocument();
+    expect(replace).not.toHaveBeenCalled();
   });
 });

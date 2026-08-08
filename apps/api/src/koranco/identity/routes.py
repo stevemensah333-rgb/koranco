@@ -4,6 +4,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 
 from koranco.config.settings import get_settings
+from koranco.identity.cookies import clear_auth_cookies, set_auth_cookies
 from koranco.identity.dependencies import (
     AuthContext,
     Authenticated,
@@ -14,8 +15,8 @@ from koranco.identity.dependencies import (
 )
 from koranco.identity.models import ApplicationUser
 from koranco.identity.permissions import Permission
-from koranco.identity.schemas import AuthenticatedUserResponse, LoginRequest
-from koranco.identity.security import CSRF_COOKIE, SESSION_COOKIE
+from koranco.identity.schemas import AuthenticatedSessionResponse, LoginRequest
+from koranco.identity.security import CSRF_COOKIE, hash_token, tokens_match
 from koranco.identity.service import (
     AuthenticationFailed,
     LoginRateLimited,
@@ -26,21 +27,22 @@ from koranco.identity.service import (
 router = APIRouter(prefix="/api/v1")
 
 
-def user_response(user: ApplicationUser) -> AuthenticatedUserResponse:
-    return AuthenticatedUserResponse(
+def session_response(user: ApplicationUser, csrf_token: str) -> AuthenticatedSessionResponse:
+    return AuthenticatedSessionResponse(
         id=user.id,
         login_identifier=user.login_identifier,
         display_name=user.display_name,
         permissions=sorted(item.permission for item in user.permissions),
         role=user.role,
         password_change_required=user.password_change_required,
+        csrf_token=csrf_token,
     )
 
 
-@router.post("/auth/login", response_model=AuthenticatedUserResponse)
+@router.post("/auth/login", response_model=AuthenticatedSessionResponse)
 def login(
     payload: LoginRequest, request: Request, response: Response, db: DatabaseSession
-) -> AuthenticatedUserResponse:
+) -> AuthenticatedSessionResponse:
     require_trusted_origin(request)
     try:
         new_session = authenticate(
@@ -55,32 +57,24 @@ def login(
         status_code = 429 if isinstance(exc, LoginRateLimited) else 401
         raise HTTPException(status_code=status_code, detail="Invalid login credentials") from exc
 
-    settings = get_settings()
-    max_age = settings.session_ttl_hours * 60 * 60
-    response.set_cookie(
-        SESSION_COOKIE,
-        new_session.session_token,
-        httponly=True,
-        secure=settings.secure_cookies,
-        samesite=settings.cookie_samesite,
-        max_age=max_age,
-        path="/",
+    set_auth_cookies(
+        response,
+        get_settings(),
+        session_token=new_session.session_token,
+        csrf_token=new_session.csrf_token,
     )
-    response.set_cookie(
-        CSRF_COOKIE,
-        new_session.csrf_token,
-        httponly=False,
-        secure=settings.secure_cookies,
-        samesite=settings.cookie_samesite,
-        max_age=max_age,
-        path="/",
-    )
-    return user_response(new_session.user)
+    return session_response(new_session.user, new_session.csrf_token)
 
 
-@router.get("/auth/session", response_model=AuthenticatedUserResponse)
-def current_session(auth: Authenticated) -> AuthenticatedUserResponse:
-    return user_response(auth.user)
+@router.get("/auth/session", response_model=AuthenticatedSessionResponse)
+def current_session(request: Request, auth: Authenticated) -> AuthenticatedSessionResponse:
+    csrf_token = request.cookies.get(CSRF_COOKIE, "")
+    if not csrf_token or not tokens_match(hash_token(csrf_token), auth.session.csrf_token_hash):
+        # The browser needs the complete cookie pair for a usable authenticated
+        # session. Keep the response generic rather than accepting or echoing an
+        # unverified token supplied by the client.
+        raise HTTPException(status_code=401, detail="Authentication required")
+    return session_response(auth.user, csrf_token)
 
 
 @router.post("/auth/logout", status_code=204)
@@ -92,8 +86,7 @@ def logout(
 ) -> None:
     auth.session.revoked_at = datetime.now(UTC)
     record_security_event(db, "logout", auth.user, request.state.request_id)
-    response.delete_cookie(SESSION_COOKIE, path="/")
-    response.delete_cookie(CSRF_COOKIE, path="/")
+    clear_auth_cookies(response, get_settings())
 
 
 @router.get("/system/status")

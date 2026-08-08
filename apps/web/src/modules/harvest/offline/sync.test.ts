@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { getCurrentSession } from "@/lib/api/auth";
 import {
   createLocalHarvestDraft,
   offlineDb,
@@ -18,7 +19,21 @@ const user = {
   password_change_required: false,
 };
 
+async function hydrateAuthenticatedSession() {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue(
+      jsonResponse({
+        ...user,
+        csrf_token: "test-csrf-token",
+      }),
+    ),
+  );
+  await getCurrentSession();
+}
+
 async function queuedHarvest() {
+  await hydrateAuthenticatedSession();
   await recordOfflineLease(user);
   const draft = await createLocalHarvestDraft(user.id);
   await saveLocalHarvestDraft(user.id, draft.id, {

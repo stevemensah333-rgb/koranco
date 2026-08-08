@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { getCurrentSession } from "@/lib/api/auth";
 import {
   createLocalDraft,
   offlineDb,
@@ -10,7 +11,29 @@ import { syncAttendance } from "./sync";
 
 const ownerId = "11111111-1111-4111-8111-111111111111";
 
+async function hydrateAuthenticatedSession() {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          id: ownerId,
+          login_identifier: "supervisor",
+          display_name: "Supervisor",
+          permissions: ["attendance.record"],
+          role: "supervisor",
+          password_change_required: false,
+          csrf_token: "test-csrf-token",
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    ),
+  );
+  await getCurrentSession();
+}
+
 async function queuedOperation() {
+  await hydrateAuthenticatedSession();
   await recordOfflineLease({
     id: ownerId,
     login_identifier: "supervisor",
