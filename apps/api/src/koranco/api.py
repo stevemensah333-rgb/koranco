@@ -7,9 +7,12 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from koranco.db.session import get_db_session
+from koranco.reports.routes import router as reports_router
 
 router = APIRouter(prefix="/api/v1")
 DatabaseSession = Annotated[Session, Depends(get_db_session)]
+
+router.include_router(reports_router)
 
 
 class StatusResponse(BaseModel):

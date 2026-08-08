@@ -33,10 +33,13 @@ class Permission(StrEnum):
     HARVEST_READ = "harvest.read"
     HARVEST_RECORD = "harvest.record"
     HARVEST_CORRECT = "harvest.correct"
+    REPORTS_READ = "reports.read"
+    EXPORTS_CREATE = "exports.create"
 
 
 ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
     Role.MANAGER: frozenset(Permission),
+    # MANAGER already receives all permissions via frozenset(Permission)
     Role.SUPERVISOR: frozenset(
         {
             Permission.SYSTEM_STATUS_READ,
@@ -48,6 +51,7 @@ ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
             Permission.HARVEST_READ,
             Permission.HARVEST_RECORD,
             Permission.HARVEST_CORRECT,
+            Permission.REPORTS_READ,
         }
     ),
     Role.WORKER: frozenset({Permission.SYSTEM_STATUS_READ}),
