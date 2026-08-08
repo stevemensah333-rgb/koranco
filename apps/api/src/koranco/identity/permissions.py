@@ -39,6 +39,7 @@ class Permission(StrEnum):
 
 ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
     Role.MANAGER: frozenset(Permission),
+    # MANAGER already receives all permissions via frozenset(Permission)
     Role.SUPERVISOR: frozenset(
         {
             Permission.SYSTEM_STATUS_READ,

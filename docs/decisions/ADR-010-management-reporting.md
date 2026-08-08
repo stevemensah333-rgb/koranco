@@ -1,43 +1,39 @@
-# ADR-010: Management reporting and operational overview
+# ADR-010: Management Reporting and Operational Overview
 
 - Status: Accepted
 - Date: 2026-08-08
+- Related: ADR-007, ADR-008, ADR-009
 
 ## Context
 
-The confirmed operational domains (Attendance, Harvest, Farm Structure, Worker register) capture authoritative data in PostgreSQL. Koranco now authorizes a reporting phase to answer operational questions such as "What attendance was recorded today?", "Which FarmUnits produced harvest?", "What happened over a selected historical period?", and "Which source records produced the displayed totals?".
-
-The project has already rejected generic SaaS dashboards, AI/ML, forecasting, inventory, payroll, productivity scoring, and a data warehouse. Reporting must remain a restrained, auditable view over authoritative domain data — not a new analytics subsystem.
+The initial product scope explicitly included "operational reporting and management overview" and "exports" as part of the first delivery. During the Offline Harvest (ADR-009) implementation phase, a temporary boundary instruction was in force to prevent scope creep. That phase is now complete from an implementation standpoint (with documented Playwright verification debt). The project owner has explicitly authorized the next planned phase: Management Reporting and Operational Overview.
 
 ## Decision
 
-Implement a narrow, typed reporting API and a compact management UI, deriving every metric from existing submitted Attendance and Harvest records. The authoritative database (PostgreSQL) performs all aggregation.
+Implement a restrained, permission-controlled management reporting experience that answers operational questions using only data already captured by the implemented Attendance and Harvest domains.
 
-1. **Reporting is online-only.** Only server-confirmed `submitted` records participate. Pending browser-local offline mutations are not official reporting data until synchronized. Reporting writes nothing to IndexedDB and is not part of offline synchronization (ADR-008, ADR-009).
-2. **No new report schema.** Reports reuse `attendance_sessions`, `attendance_entries`, `harvest_records`, and `farm_units`. No summary tables, materialized views, analytics database, or caching infrastructure is introduced unless a demonstrated need appears.
-3. **Typed endpoints, no query language.** Narrow endpoints: `GET /reports/overview`, `GET /reports/attendance`, `GET /reports/harvest`, plus Manager-only CSV exports. No generic reporting/query DSL and no generic analytics engine.
-4. **Database aggregation.** `COUNT`, `SUM`, and `GROUP BY` are executed in PostgreSQL. No client-side aggregation of full datasets.
-5. **Units are never combined.** Harvest quantities are grouped independently by their constrained unit (`fruit_count`, `kilograms`). No unit conversion is introduced. Incompatible units always remain separate totals (e.g. 12,450 fruit and 840.5 kg are never summed).
-6. **Centralized permissions.** Reporting is gated by `reports.read`; CSV exports by `exports.create`. Manager: both. Supervisor: `reports.read` only. Worker: neither. Backend permission dependencies are authoritative; no role-name checks are scattered through reporting code.
-7. **Source traceability.** Every summary returns the source `AttendanceSession` / `HarvestRecord` identifiers and a bounded source-record list so managers can drill into the records that produced a total.
-8. **Audited exports.** CSV export is Manager-only, bounded, UTF-8, respects the same filters, uses stable columns, and is recorded as a security event. Export audit stores the actor, export type, timestamp, and filters — never the exported file contents.
+Key architectural boundaries:
 
-### Export audit mechanism
-
-Exports are data-access events. We record them as **security events** (`SecurityEvent`), not operational domain audit events, and add a nullable JSONB `details` column to `security_events` (migration 0009). Rationale:
-
-- Operational audit (`OperationalAuditEvent`) describes lifecycle transitions of a specific domain entity (create/submit/correct/discard). An export is not a mutation of a domain entity.
-- Security events already form a Manager-only review surface (`/admin/security-events`) appropriate for reviewing who exported operational or personal data.
-- `details` stores only the export type, row count, and filters — never file contents.
-
-### FarmUnit aggregation boundary
-
-`HarvestRecord` attaches to exactly one `FarmUnit`. When an active Field has active child Blocks, harvest must be recorded on a Block (see product docs and ADR-006); however, historical records may attach directly to a Field (e.g. before Blocks existed). Because the same population of records can therefore be split between direct-Field and child-Block rows, **hierarchy aggregation is not implemented**: the FarmUnit report filter matches records whose FarmUnit is exactly the selected unit, and the by-FarmUnit breakdown lists each unit's own records. Field-inclusive-of-Blocks aggregation is left as an open Koranco question rather than inventing a business rule that could double-count or omit records.
+- All reporting reads **authoritative PostgreSQL data only**; never browser-local pending state.
+- Reporting is **online-only**; no IndexedDB caching, no outbox involvement, no offline reporting workflow.
+- Reporting does **not** alter Attendance or Harvest source-of-truth semantics, lifecycle rules, or correction processes.
+- Incompatible Harvest units (`fruit_count` and `kilograms`) must **never** be combined or converted.
+- Every summary metric must remain **traceable** to source operational records (drill-down to AttendanceSession / HarvestRecord).
+- No generic analytics platform, data warehouse, or query engine is introduced.
+- CSV exports are **Manager-only** (`exports.create` permission) and produce an auditable event.
+- No AI/ML, forecasting, payroll, productivity scoring, yield-per-area metrics, or speculative analytics are authorized.
+- Database aggregation (COUNT, SUM, GROUP BY) is preferred over client-side aggregation.
+- No materialized views or summary tables are introduced without a demonstrated concrete need.
+- Reporting permissions are added centrally (`reports.read`, `exports.create`) and enforced authoritatively (no role-name checks).
+- Unresolved Koranco business questions (official unit set confirmation, exact metric definitions beyond existing domain semantics, etc.) remain documented as unresolved.
 
 ## Consequences
 
-- Managers and Supervisors get a restrained operational overview; only Managers can export CSV.
-- Reports reflect PostgreSQL state at query time; unsynced offline work is excluded by definition.
-- Harvest unit semantics remain unchanged and never produce a single cross-unit total.
-- A small, deliberate schema change (`security_events.details`) supports export auditing without a reporting schema.
-- Date ranges are inclusive and use the explicit operational dates on Attendance and Harvest records; "today" defaults to the server's UTC calendar date (Ghana is UTC/GMT with no DST) and is overridable.
+- Managers and Supervisors gain `reports.read`; only Managers receive `exports.create`.
+- The reporting surface is deliberately narrow and explicit (overview + attendance + harvest endpoints).
+- CSV exports are bounded, UTF-8, formula-injection safe, and audited.
+- Empty/error states, unit separation, date-range semantics (operational date), and source traceability are first-class concerns.
+- Phase 9 (Offline Harvest) browser verification debt remains documented separately and is not claimed as solved.
+- Future expansion of reporting (new metrics, additional domains, materialized views) requires explicit approval and a new ADR when justified by real operational need.
+
+This ADR records the transition from the temporary phase-boundary instruction to an authorized, bounded reporting implementation phase. All other deferred items (inventory, payroll, crop lifecycle, full traceability, AI/ML, etc.) remain prohibited unless separately authorized.

@@ -1,353 +1,225 @@
-import uuid
-from datetime import date
+"""Reporting service – PostgreSQL aggregation only (ADR-010).
+
+All queries use authoritative data. No client-side aggregation of full result sets.
+Harvest units are never combined.
+"""
+
+from datetime import date, datetime
+from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import ColumnElement, func, select
-from sqlalchemy.orm import Session, aliased
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session
 
 from koranco.attendance.models import AttendanceEntry, AttendanceSession
 from koranco.farm_structure.models import FarmUnit
 from koranco.harvest.models import HarvestRecord
-from koranco.harvest.schemas import HarvestUnit
 from koranco.identity.models import ApplicationUser
-from koranco.reports.schemas import (
-    AttendanceSessionReport,
-    HarvestFarmUnitTotal,
-    HarvestSourceRecord,
-    HarvestUnitTotal,
-)
-
-SUBMITTED = "submitted"
-PRESENT = "present"
-ABSENT = "absent"
+from koranco.operational_audit.models import OperationalAuditEvent
 
 
-def _attendance_where(date_from: date, date_to: date) -> list[ColumnElement[bool]]:
-    return [
-        AttendanceSession.status == SUBMITTED,
-        AttendanceSession.attendance_date.between(date_from, date_to),
-    ]
-
-
-def _harvest_where(
-    date_from: date, date_to: date, farm_unit_id: uuid.UUID | None, unit: HarvestUnit | None
-) -> list[ColumnElement[bool]]:
-    clauses = [
-        HarvestRecord.status == SUBMITTED,
-        HarvestRecord.harvest_date.between(date_from, date_to),
-    ]
-    if farm_unit_id is not None:
-        clauses.append(HarvestRecord.farm_unit_id == farm_unit_id)
-    if unit is not None:
-        clauses.append(HarvestRecord.unit == unit)
-    return clauses
-
-
-def attendance_totals(db: Session, date_from: date, date_to: date) -> dict[str, int]:
-    """Present/Absent/roster counts over submitted sessions in an inclusive date range."""
-    statement = (
-        select(
-            func.count(func.distinct(AttendanceSession.id)).label("submitted_sessions"),
-            func.count(AttendanceEntry.id)
-            .filter(AttendanceEntry.attendance_status == PRESENT)
-            .label("present_count"),
-            func.count(AttendanceEntry.id)
-            .filter(AttendanceEntry.attendance_status == ABSENT)
-            .label("absent_count"),
-            func.count(AttendanceEntry.id).label("roster_count"),
+def get_overview_today(db: Session, target_date: date) -> dict[str, Any]:
+    # Attendance today
+    att_sessions = db.execute(
+        select(func.count(AttendanceSession.id)).where(
+            AttendanceSession.attendance_date == target_date,
+            AttendanceSession.status == "submitted",
         )
-        .join(AttendanceEntry, AttendanceEntry.attendance_session_id == AttendanceSession.id)
-        .where(*_attendance_where(date_from, date_to))
-    )
-    row = db.execute(statement).one()
+    ).scalar_one()
+
+    present = db.execute(
+        select(func.count(AttendanceEntry.id)).join(AttendanceSession).where(
+            AttendanceSession.attendance_date == target_date,
+            AttendanceSession.status == "submitted",
+            AttendanceEntry.status == "present",
+        )
+    ).scalar_one()
+
+    absent = db.execute(
+        select(func.count(AttendanceEntry.id)).join(AttendanceSession).where(
+            AttendanceSession.attendance_date == target_date,
+            AttendanceSession.status == "submitted",
+            AttendanceEntry.status == "absent",
+        )
+    ).scalar_one()
+
+    # Harvest today – unit aware
+    harvest_rows = db.execute(
+        select(HarvestRecord.unit, func.sum(HarvestRecord.quantity), func.count(HarvestRecord.id))
+        .where(
+            HarvestRecord.harvest_date == target_date,
+            HarvestRecord.status == "submitted",
+        )
+        .group_by(HarvestRecord.unit)
+    ).all()
+
+    harvest_totals: dict[str, float] = {}
+    harvest_count = 0
+    for unit, total, cnt in harvest_rows:
+        harvest_totals[unit] = float(total or 0)
+        harvest_count += cnt or 0
+
     return {
-        "submitted_sessions": int(row.submitted_sessions),
-        "present_count": int(row.present_count),
-        "absent_count": int(row.absent_count),
-        "roster_count": int(row.roster_count),
+        "attendance_sessions": att_sessions or 0,
+        "present_count": present or 0,
+        "absent_count": absent or 0,
+        "harvest_records": harvest_count,
+        "harvest_totals": harvest_totals,
     }
 
 
-def attendance_sessions(
-    db: Session, date_from: date, date_to: date, limit: int
-) -> list[AttendanceSessionReport]:
-    submitter = aliased(ApplicationUser)
-    creator = aliased(ApplicationUser)
-    statement = (
+def get_recent_activity(db: Session, limit: int = 5) -> dict[str, list]:
+    # Recent submitted Harvest
+    recent_h = db.execute(
+        select(
+            HarvestRecord.id,
+            HarvestRecord.harvest_date,
+            FarmUnit.code,
+            FarmUnit.name,
+            HarvestRecord.quantity,
+            HarvestRecord.unit,
+            ApplicationUser.display_name,
+        )
+        .join(FarmUnit, HarvestRecord.farm_unit_id == FarmUnit.id)
+        .outerjoin(ApplicationUser, HarvestRecord.submitted_by == ApplicationUser.id)
+        .where(HarvestRecord.status == "submitted")
+        .order_by(HarvestRecord.submitted_at.desc())
+        .limit(limit)
+    ).all()
+
+    recent_harvest = [
+        {
+            "id": str(r[0]),
+            "harvest_date": r[1],
+            "farm_unit_code": r[2],
+            "farm_unit_name": r[3],
+            "quantity": str(r[4]),
+            "unit": r[5],
+            "submitted_by": r[6],
+        }
+        for r in recent_h
+    ]
+
+    # Recent submitted Attendance sessions
+    recent_a = db.execute(
         select(
             AttendanceSession.id,
             AttendanceSession.attendance_date,
-            AttendanceSession.submitted_at,
-            AttendanceSession.submitted_by,
-            submitter.display_name.label("submitted_by_name"),
-            creator.display_name.label("recorded_by_name"),
-            func.count(AttendanceEntry.id)
-            .filter(AttendanceEntry.attendance_status == PRESENT)
-            .label("present_count"),
-            func.count(AttendanceEntry.id)
-            .filter(AttendanceEntry.attendance_status == ABSENT)
-            .label("absent_count"),
-            func.count(AttendanceEntry.id).label("roster_count"),
+            func.count(AttendanceEntry.id).filter(AttendanceEntry.status == "present"),
+            func.count(AttendanceEntry.id).filter(AttendanceEntry.status == "absent"),
+            ApplicationUser.display_name,
         )
-        .join(AttendanceEntry, AttendanceEntry.attendance_session_id == AttendanceSession.id)
-        .join(submitter, submitter.id == AttendanceSession.submitted_by, isouter=True)
-        .join(creator, creator.id == AttendanceSession.created_by)
-        .where(*_attendance_where(date_from, date_to))
-        .group_by(
-            AttendanceSession.id,
-            AttendanceSession.attendance_date,
-            AttendanceSession.submitted_at,
-            AttendanceSession.submitted_by,
-            submitter.display_name,
-            creator.display_name,
-        )
-        .order_by(AttendanceSession.attendance_date.desc(), AttendanceSession.submitted_at.desc())
+        .join(AttendanceEntry, AttendanceSession.id == AttendanceEntry.session_id)
+        .outerjoin(ApplicationUser, AttendanceSession.submitted_by == ApplicationUser.id)
+        .where(AttendanceSession.status == "submitted")
+        .group_by(AttendanceSession.id, AttendanceSession.attendance_date, ApplicationUser.display_name)
+        .order_by(AttendanceSession.submitted_at.desc())
         .limit(limit)
-    )
-    return [
-        AttendanceSessionReport(
-            id=row.id,
-            attendance_date=row.attendance_date,
-            submitted_at=row.submitted_at,
-            submitted_by_id=row.submitted_by,
-            submitted_by_name=row.submitted_by_name,
-            recorded_by_name=row.recorded_by_name,
-            present_count=row.present_count,
-            absent_count=row.absent_count,
-            roster_count=row.roster_count,
+    ).all()
+
+    recent_attendance = [
+        {
+            "id": str(r[0]),
+            "attendance_date": r[1],
+            "present_count": r[2] or 0,
+            "absent_count": r[3] or 0,
+            "submitted_by": r[4],
+        }
+        for r in recent_a
+    ]
+
+    return {"recent_harvest": recent_harvest, "recent_attendance": recent_attendance}
+
+
+def get_attendance_report(
+    db: Session, start_date: date, end_date: date, farm_unit_id: str | None = None
+) -> list[dict]:
+    stmt = (
+        select(
+            AttendanceSession.attendance_date,
+            AttendanceSession.id,
+            func.count(AttendanceEntry.id).filter(AttendanceEntry.status == "present"),
+            func.count(AttendanceEntry.id).filter(AttendanceEntry.status == "absent"),
+            func.count(AttendanceEntry.id),
+            ApplicationUser.display_name,
         )
-        for row in db.execute(statement).all()
+        .join(AttendanceEntry, AttendanceSession.id == AttendanceEntry.session_id)
+        .outerjoin(ApplicationUser, AttendanceSession.submitted_by == ApplicationUser.id)
+        .where(
+            AttendanceSession.attendance_date.between(start_date, end_date),
+            AttendanceSession.status == "submitted",
+        )
+        .group_by(
+            AttendanceSession.attendance_date,
+            AttendanceSession.id,
+            ApplicationUser.display_name,
+        )
+        .order_by(AttendanceSession.attendance_date.desc())
+    )
+
+    rows = db.execute(stmt).all()
+    return [
+        {
+            "attendance_date": r[0],
+            "session_id": str(r[1]),
+            "present_count": r[2] or 0,
+            "absent_count": r[3] or 0,
+            "roster_count": r[4] or 0,
+            "submitted_by": r[5],
+        }
+        for r in rows
     ]
 
 
-def harvest_unit_totals(
-    db: Session,
-    date_from: date,
-    date_to: date,
-    farm_unit_id: uuid.UUID | None,
-    unit: HarvestUnit | None,
-) -> list[HarvestUnitTotal]:
-    """Harvest quantities grouped independently by unit. Units are never summed together."""
-    statement = (
-        select(
-            HarvestRecord.unit,
-            func.count(HarvestRecord.id).label("record_count"),
-            func.sum(HarvestRecord.quantity).label("quantity"),
+def get_harvest_report(
+    db: Session, start_date: date, end_date: date, farm_unit_id: str | None = None, unit: str | None = None
+) -> dict:
+    base = (
+        select(HarvestRecord)
+        .where(
+            HarvestRecord.harvest_date.between(start_date, end_date),
+            HarvestRecord.status == "submitted",
         )
-        .where(*_harvest_where(date_from, date_to, farm_unit_id, unit))
+        .order_by(HarvestRecord.harvest_date.desc())
+    )
+    if farm_unit_id:
+        base = base.where(HarvestRecord.farm_unit_id == farm_unit_id)
+    if unit:
+        base = base.where(HarvestRecord.unit == unit)
+
+    records = db.execute(base).scalars().all()
+
+    # Unit-aware totals
+    totals_stmt = (
+        select(HarvestRecord.unit, func.sum(HarvestRecord.quantity), func.count())
+        .where(
+            HarvestRecord.harvest_date.between(start_date, end_date),
+            HarvestRecord.status == "submitted",
+        )
         .group_by(HarvestRecord.unit)
-        .order_by(HarvestRecord.unit)
     )
-    return [
-        HarvestUnitTotal(
-            unit=HarvestUnit(row.unit),
-            record_count=int(row.record_count),
-            quantity=row.quantity,
-        )
-        for row in db.execute(statement).all()
-    ]
+    if farm_unit_id:
+        totals_stmt = totals_stmt.where(HarvestRecord.farm_unit_id == farm_unit_id)
+    if unit:
+        totals_stmt = totals_stmt.where(HarvestRecord.unit == unit)
 
+    totals = db.execute(totals_stmt).all()
 
-def harvest_by_farm_unit(
-    db: Session,
-    date_from: date,
-    date_to: date,
-    farm_unit_id: uuid.UUID | None,
-    unit: HarvestUnit | None,
-) -> list[HarvestFarmUnitTotal]:
-    """Per-FarmUnit totals, each keeping every unit separate. Exact FarmUnit match only."""
-    statement = (
-        select(
-            HarvestRecord.farm_unit_id,
-            FarmUnit.code,
-            FarmUnit.name,
-            FarmUnit.unit_type,
-            HarvestRecord.unit,
-            func.count(HarvestRecord.id).label("record_count"),
-            func.sum(HarvestRecord.quantity).label("quantity"),
-        )
-        .join(FarmUnit, FarmUnit.id == HarvestRecord.farm_unit_id)
-        .where(*_harvest_where(date_from, date_to, farm_unit_id, unit))
-        .group_by(
-            HarvestRecord.farm_unit_id,
-            FarmUnit.code,
-            FarmUnit.name,
-            FarmUnit.unit_type,
-            HarvestRecord.unit,
-        )
-        .order_by(FarmUnit.code, HarvestRecord.unit)
-    )
-    grouped: dict[uuid.UUID, dict[str, Any]] = {}
-    for row in db.execute(statement).all():
-        bucket = grouped.setdefault(
-            row.farm_unit_id,
+    return {
+        "totals_by_unit": [
+            {"unit": u, "total": float(t or 0), "record_count": c} for u, t, c in totals
+        ],
+        "records": [
             {
-                "farm_unit_id": row.farm_unit_id,
-                "farm_unit_code": row.code,
-                "farm_unit_name": row.name,
-                "farm_unit_type": row.unit_type,
-                "record_count": 0,
-                "by_unit": [],
-            },
-        )
-        bucket["record_count"] += int(row.record_count)
-        bucket["by_unit"].append(
-            HarvestUnitTotal(
-                unit=HarvestUnit(row.unit),
-                record_count=int(row.record_count),
-                quantity=row.quantity,
-            )
-        )
-    return [HarvestFarmUnitTotal(**value) for value in grouped.values()]
-
-
-def harvest_record_count(
-    db: Session,
-    date_from: date,
-    date_to: date,
-    farm_unit_id: uuid.UUID | None,
-    unit: HarvestUnit | None,
-) -> int:
-    statement = select(func.count(HarvestRecord.id)).where(
-        *_harvest_where(date_from, date_to, farm_unit_id, unit)
-    )
-    return int(db.scalar(statement) or 0)
-
-
-def harvest_source_records(
-    db: Session,
-    date_from: date,
-    date_to: date,
-    farm_unit_id: uuid.UUID | None,
-    unit: HarvestUnit | None,
-    limit: int,
-) -> list[HarvestSourceRecord]:
-    submitter = aliased(ApplicationUser)
-    statement = (
-        select(
-            HarvestRecord.id,
-            HarvestRecord.harvest_date,
-            HarvestRecord.farm_unit_id,
-            FarmUnit.code,
-            FarmUnit.name,
-            FarmUnit.unit_type,
-            HarvestRecord.quantity,
-            HarvestRecord.unit,
-            HarvestRecord.notes,
-            submitter.display_name.label("submitted_by_name"),
-            HarvestRecord.submitted_at,
-        )
-        .join(FarmUnit, FarmUnit.id == HarvestRecord.farm_unit_id)
-        .join(submitter, submitter.id == HarvestRecord.submitted_by, isouter=True)
-        .where(*_harvest_where(date_from, date_to, farm_unit_id, unit))
-        .order_by(HarvestRecord.harvest_date.desc(), HarvestRecord.submitted_at.desc())
-        .limit(limit)
-    )
-    return [
-        HarvestSourceRecord(
-            id=row.id,
-            harvest_date=row.harvest_date,
-            farm_unit_id=row.farm_unit_id,
-            farm_unit_code=row.code,
-            farm_unit_name=row.name,
-            farm_unit_type=row.unit_type,
-            quantity=row.quantity,
-            unit=HarvestUnit(row.unit),
-            notes=row.notes,
-            submitted_by_name=row.submitted_by_name,
-            submitted_at=row.submitted_at,
-        )
-        for row in db.execute(statement).all()
-    ]
-
-
-def recent_attendance_sessions(db: Session, limit: int) -> list[AttendanceSessionReport]:
-    """Most recently submitted Attendance sessions, newest first, regardless of date."""
-    submitter = aliased(ApplicationUser)
-    creator = aliased(ApplicationUser)
-    statement = (
-        select(
-            AttendanceSession.id,
-            AttendanceSession.attendance_date,
-            AttendanceSession.submitted_at,
-            AttendanceSession.submitted_by,
-            submitter.display_name.label("submitted_by_name"),
-            creator.display_name.label("recorded_by_name"),
-            func.count(AttendanceEntry.id)
-            .filter(AttendanceEntry.attendance_status == PRESENT)
-            .label("present_count"),
-            func.count(AttendanceEntry.id)
-            .filter(AttendanceEntry.attendance_status == ABSENT)
-            .label("absent_count"),
-            func.count(AttendanceEntry.id).label("roster_count"),
-        )
-        .join(AttendanceEntry, AttendanceEntry.attendance_session_id == AttendanceSession.id)
-        .join(submitter, submitter.id == AttendanceSession.submitted_by, isouter=True)
-        .join(creator, creator.id == AttendanceSession.created_by)
-        .where(AttendanceSession.status == SUBMITTED)
-        .group_by(
-            AttendanceSession.id,
-            AttendanceSession.attendance_date,
-            AttendanceSession.submitted_at,
-            AttendanceSession.submitted_by,
-            submitter.display_name,
-            creator.display_name,
-        )
-        .order_by(AttendanceSession.submitted_at.desc(), AttendanceSession.attendance_date.desc())
-        .limit(limit)
-    )
-    return [
-        AttendanceSessionReport(
-            id=row.id,
-            attendance_date=row.attendance_date,
-            submitted_at=row.submitted_at,
-            submitted_by_id=row.submitted_by,
-            submitted_by_name=row.submitted_by_name,
-            recorded_by_name=row.recorded_by_name,
-            present_count=row.present_count,
-            absent_count=row.absent_count,
-            roster_count=row.roster_count,
-        )
-        for row in db.execute(statement).all()
-    ]
-
-
-def recent_harvest_records(db: Session, limit: int) -> list[HarvestSourceRecord]:
-    """Most recently submitted Harvest records, newest first, regardless of date."""
-    submitter = aliased(ApplicationUser)
-    statement = (
-        select(
-            HarvestRecord.id,
-            HarvestRecord.harvest_date,
-            HarvestRecord.farm_unit_id,
-            FarmUnit.code,
-            FarmUnit.name,
-            FarmUnit.unit_type,
-            HarvestRecord.quantity,
-            HarvestRecord.unit,
-            HarvestRecord.notes,
-            submitter.display_name.label("submitted_by_name"),
-            HarvestRecord.submitted_at,
-        )
-        .join(FarmUnit, FarmUnit.id == HarvestRecord.farm_unit_id)
-        .join(submitter, submitter.id == HarvestRecord.submitted_by, isouter=True)
-        .where(HarvestRecord.status == SUBMITTED)
-        .order_by(HarvestRecord.submitted_at.desc(), HarvestRecord.harvest_date.desc())
-        .limit(limit)
-    )
-    return [
-        HarvestSourceRecord(
-            id=row.id,
-            harvest_date=row.harvest_date,
-            farm_unit_id=row.farm_unit_id,
-            farm_unit_code=row.code,
-            farm_unit_name=row.name,
-            farm_unit_type=row.unit_type,
-            quantity=row.quantity,
-            unit=HarvestUnit(row.unit),
-            notes=row.notes,
-            submitted_by_name=row.submitted_by_name,
-            submitted_at=row.submitted_at,
-        )
-        for row in db.execute(statement).all()
-    ]
+                "harvest_date": rec.harvest_date,
+                "record_id": str(rec.id),
+                "farm_unit_code": rec.farm_unit.code,
+                "farm_unit_name": rec.farm_unit.name,
+                "quantity": str(rec.quantity),
+                "unit": rec.unit,
+                "submitted_by": rec.submitted_by_user.display_name if rec.submitted_by_user else None,
+            }
+            for rec in records
+        ],
+        "total_records": len(records),
+    }
