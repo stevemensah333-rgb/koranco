@@ -19,6 +19,15 @@ This is a production system for a commercial pineapple producer/exporter in Ghan
 - exports
 - administration
 - backup and recovery support
+- production operations (monitoring, migration, incident, and handover readiness)
+
+The initial scope is now being delivered in phases. Completed: foundation,
+registers, online/offline attendance, online/offline Harvest, operational
+reporting and management overview (with Manager-only CSV export), and Backup,
+Recovery, and Production Operations (provisional backup policy, portable
+backup/restore tooling, restore drill, and operational runbooks). See
+[reporting](reporting.md) and the [operations](../operations/backup-and-recovery.md)
+documentation.
 
 ## Deferred scope
 

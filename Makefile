@@ -1,4 +1,4 @@
-.PHONY: setup infra-up infra-down migrate dev-api dev-web format lint typecheck test e2e build check
+.PHONY: setup infra-up infra-down migrate dev-api dev-web format lint typecheck test e2e build check backup restore drill
 
 PNPM ?= corepack pnpm
 UV ?= uv
@@ -51,3 +51,13 @@ check:
 	$(MAKE) typecheck
 	$(MAKE) test
 	$(MAKE) build
+
+# Operational: require the documented environment (see docs/operations/backup-and-recovery.md).
+backup:
+	./scripts/backup-postgres.sh
+
+restore:
+	./scripts/restore-postgres.sh
+
+drill:
+	./scripts/backup-restore-drill.sh
