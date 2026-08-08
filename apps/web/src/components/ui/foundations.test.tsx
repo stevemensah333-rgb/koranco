@@ -68,6 +68,28 @@ describe("application shells", () => {
     }
   });
 
+  it("renders management landmarks: header, primary nav, sidebar, and main", () => {
+    render(
+      <ManagementShell
+        navigation={[
+          { current: true, href: "/", label: "Current area" },
+          { href: "/related", label: "Related area" },
+        ]}
+      >
+        <h1>Management content</h1>
+      </ManagementShell>,
+    );
+
+    expect(screen.getByRole("banner")).toBeInTheDocument();
+    for (const nav of screen.getAllByRole("navigation", {
+      name: "Primary navigation",
+    })) {
+      expect(nav).toBeInTheDocument();
+    }
+    expect(screen.getByRole("complementary")).toBeInTheDocument();
+    expect(screen.getByRole("main")).toHaveTextContent("Management content");
+  });
+
   it("renders field context, status location, content, and primary action", () => {
     render(
       <FieldShell
