@@ -100,6 +100,7 @@ export function AttendanceReport() {
   return (
     <ManagementShell
       navigation={managementNavigation(user, "/reports/attendance")}
+      user={user}
     >
       <PageHeader
         title="Attendance report"

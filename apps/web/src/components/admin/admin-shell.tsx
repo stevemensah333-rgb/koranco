@@ -51,6 +51,7 @@ export function AdminShell({
         user,
         current === "users" ? "/admin/users" : "/admin/security-events",
       )}
+      user={user}
     >
       {children}
     </ManagementShell>

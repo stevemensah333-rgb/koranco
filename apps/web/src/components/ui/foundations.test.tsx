@@ -62,10 +62,9 @@ describe("application shells", () => {
     expect(
       screen.getByRole("link", { name: "Skip to main content" }),
     ).toHaveAttribute("href", "#main-content");
-    for (const link of screen.getAllByRole("link", { name: "Related area" })) {
-      expect(link).toHaveAttribute("href", "/related");
-      expect(link.tabIndex).toBe(0);
-    }
+    const related = screen.getByRole("link", { name: "Related area" });
+    expect(related).toHaveAttribute("href", "/related");
+    expect(related.tabIndex).toBe(0);
   });
 
   it("renders management landmarks: header, primary nav, sidebar, and main", () => {
@@ -81,11 +80,9 @@ describe("application shells", () => {
     );
 
     expect(screen.getByRole("banner")).toBeInTheDocument();
-    for (const nav of screen.getAllByRole("navigation", {
-      name: "Primary navigation",
-    })) {
-      expect(nav).toBeInTheDocument();
-    }
+    expect(
+      screen.getByRole("navigation", { name: "Primary navigation" }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("complementary")).toBeInTheDocument();
     expect(screen.getByRole("main")).toHaveTextContent("Management content");
   });

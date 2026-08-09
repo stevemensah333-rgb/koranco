@@ -138,7 +138,7 @@ export function HarvestList() {
     );
 
   return (
-    <ManagementShell navigation={nav}>
+    <ManagementShell navigation={nav} user={user}>
       <PageHeader
         title="Harvest"
         description="Capture Harvest in the field and inspect server-confirmed quantities by operational FarmUnit."

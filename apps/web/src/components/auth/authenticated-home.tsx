@@ -17,7 +17,6 @@ import {
   getCurrentSession,
   getProtectedSystemStatus,
   changeOwnPassword,
-  logout,
 } from "@/lib/api/auth";
 
 export function AuthenticatedHome() {
@@ -26,8 +25,6 @@ export function AuthenticatedHome() {
   const [status, setStatus] = useState<"loading" | "available" | "unavailable">(
     "loading",
   );
-  const [logoutPending, setLogoutPending] = useState(false);
-  const [logoutError, setLogoutError] = useState("");
 
   useEffect(() => {
     const controller = new AbortController();
@@ -52,57 +49,6 @@ export function AuthenticatedHome() {
     return () => controller.abort();
   }, [router]);
 
-  async function handleLogout() {
-    if (logoutPending) return;
-    setLogoutError("");
-
-    if (user) {
-      try {
-        const { hasPendingForOwner } =
-          await import("@/modules/attendance/offline/db");
-        if (
-          (await hasPendingForOwner(user.id)) &&
-          !window.confirm(
-            "Unsynced Attendance or Harvest will remain on this device and cannot be synchronized by another account. Sign out anyway?",
-          )
-        )
-          return;
-      } catch {
-        setLogoutError(
-          "Sign-out was not attempted because this device could not check for unsynced work. Try again.",
-        );
-        return;
-      }
-    }
-
-    setLogoutPending(true);
-    try {
-      await logout();
-      const signedOutUserId = user?.id;
-      setUser(null);
-      setStatus("loading");
-      router.replace("/login");
-
-      // Local offline authorization is suspended after the server has revoked the
-      // session, but device storage must never delay removal of authenticated UI.
-      if (signedOutUserId) {
-        void import("@/modules/attendance/offline/db")
-          .then(({ suspendOfflineLease }) =>
-            suspendOfflineLease(signedOutUserId),
-          )
-          .catch(() => undefined);
-      }
-    } catch (error) {
-      setLogoutError(
-        error instanceof ApiError && error.status === 403
-          ? "The server rejected the sign-out security check. Your session is still active. Refresh the page and try again."
-          : "Koranco could not sign you out. Your session is still active. Check your connection and try again.",
-      );
-    } finally {
-      setLogoutPending(false);
-    }
-  }
-
   if (!user) {
     return (
       <main className="auth-loading">
@@ -120,26 +66,7 @@ export function AuthenticatedHome() {
 
   if (user.permissions.includes("reports.read")) {
     return (
-      <ManagementShell
-        navigation={managementNavigation(user, "/")}
-        utility={
-          <div className="session-utility">
-            <span className="session-identity">{user.display_name}</span>
-            <Button
-              disabled={logoutPending}
-              onClick={handleLogout}
-              variant="secondary"
-            >
-              {logoutPending ? "Signing out…" : "Sign out"}
-            </Button>
-          </div>
-        }
-      >
-        {logoutError ? (
-          <Alert title="Sign-out failed" tone="error">
-            {logoutError}
-          </Alert>
-        ) : null}
+      <ManagementShell navigation={managementNavigation(user, "/")} user={user}>
         <ManagementOverview apiStatus={status} />
       </ManagementShell>
     );
@@ -203,26 +130,7 @@ export function AuthenticatedHome() {
   }
 
   return (
-    <ManagementShell
-      navigation={managementNavigation(user, "/")}
-      utility={
-        <div className="session-utility">
-          <span className="session-identity">{user.display_name}</span>
-          <Button
-            disabled={logoutPending}
-            onClick={handleLogout}
-            variant="secondary"
-          >
-            {logoutPending ? "Signing out…" : "Sign out"}
-          </Button>
-        </div>
-      }
-    >
-      {logoutError ? (
-        <Alert title="Sign-out failed" tone="error">
-          {logoutError}
-        </Alert>
-      ) : null}
+    <ManagementShell navigation={managementNavigation(user, "/")} user={user}>
       <PageHeader
         description="The authenticated technical foundation is running. Operational workflows will be added only after Koranco validates their requirements."
         title="System status"
