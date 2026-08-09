@@ -10,6 +10,19 @@ class AttendanceStatus(StrEnum):
     ABSENT = "absent"
 
 
+def validate_entry_times(
+    attendance_status: AttendanceStatus | None,
+    time_in: time | None,
+    time_out: time | None,
+) -> None:
+    """Shared rule for draft and correction entries: Absent has no times, and
+    time-out cannot precede time-in. Matches the PostgreSQL constraints."""
+    if attendance_status == AttendanceStatus.ABSENT and (time_in or time_out):
+        raise ValueError("Absent workers cannot have time-in or time-out")
+    if time_in and time_out and time_out < time_in:
+        raise ValueError("Time-out cannot precede time-in")
+
+
 class DraftEntryRequest(BaseModel):
     worker_id: uuid.UUID
     attendance_status: AttendanceStatus | None = None
@@ -18,10 +31,7 @@ class DraftEntryRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_times(self) -> "DraftEntryRequest":
-        if self.attendance_status == AttendanceStatus.ABSENT and (self.time_in or self.time_out):
-            raise ValueError("Absent workers cannot have time-in or time-out")
-        if self.time_in and self.time_out and self.time_out < self.time_in:
-            raise ValueError("Time-out cannot precede time-in")
+        validate_entry_times(self.attendance_status, self.time_in, self.time_out)
         return self
 
 
@@ -43,12 +53,7 @@ class CorrectEntryRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_times(self) -> "CorrectEntryRequest":
-        DraftEntryRequest(
-            worker_id=uuid.uuid4(),
-            attendance_status=self.attendance_status,
-            time_in=self.time_in,
-            time_out=self.time_out,
-        )
+        validate_entry_times(self.attendance_status, self.time_in, self.time_out)
         if not self.reason.strip():
             raise ValueError("Correction reason is required")
         self.reason = self.reason.strip()

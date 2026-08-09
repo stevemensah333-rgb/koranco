@@ -1,3 +1,5 @@
+"use client";
+
 import { notFound } from "next/navigation";
 
 import { FieldShell } from "@/components/shells/field-shell";
@@ -11,6 +13,15 @@ import { SelectInput, TextArea, TextInput } from "@/components/ui/inputs";
 import { LoadingIndicator } from "@/components/ui/loading-indicator";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { BarChart } from "@/modules/reports/components/bar-chart";
+import { ChartFrame } from "@/modules/reports/components/chart-frame";
+import { HarvestBars } from "@/modules/reports/components/harvest-bars";
+import { ReportSection } from "@/modules/reports/components/report-section";
+import {
+  PresetButtons,
+  ReportToolbar,
+} from "@/modules/reports/components/report-toolbar";
+import { SummaryStrip } from "@/modules/reports/components/summary-strip";
 
 type ExampleRow = {
   id: string;
@@ -197,6 +208,193 @@ export default function DesignSystemPage() {
             getRowKey={(row) => row.id}
             rows={exampleRows}
           />
+        </section>
+
+        <section className="review-section" aria-labelledby="reporting-heading">
+          <h2 id="reporting-heading">Management reporting primitives</h2>
+          <p className="review-intro">
+            Synthetic-only examples of the reporting primitives (summary strip,
+            report toolbar, chart frame, dependency-free bar chart, FarmUnit
+            comparison). Not operational data.
+          </p>
+          <ReportSection
+            description="Compact bordered statistic cells, not oversized metric cards."
+            title="Summary strip"
+          >
+            <SummaryStrip
+              groups={[
+                {
+                  title: "Attendance",
+                  cells: [
+                    { label: "Sessions", value: "3" },
+                    { label: "Present", value: "41", context: "of 46 roster" },
+                    { label: "Absent", value: "5" },
+                    { label: "Roster", value: "46" },
+                  ],
+                },
+                {
+                  title: "Harvest",
+                  cells: [
+                    {
+                      label: "Fruit count",
+                      value: "12,450",
+                      context: "2 records",
+                    },
+                    { label: "Kilograms", value: "840.5", context: "1 record" },
+                  ],
+                },
+              ]}
+            />
+          </ReportSection>
+          <ReportSection
+            description="Filters stay inline; the active period is stated explicitly."
+            title="Report toolbar"
+          >
+            <ReportToolbar
+              actions={
+                <Button variant="secondary">Export attendance CSV</Button>
+              }
+              periodLabel="Period 2026-08-01 – 2026-08-08 · inclusive, submitted sessions only"
+            >
+              <label className="filter-field">
+                <span className="filter-field-label">From</span>
+                <TextInput type="date" defaultValue="2026-08-01" />
+              </label>
+              <label className="filter-field">
+                <span className="filter-field-label">To</span>
+                <TextInput type="date" defaultValue="2026-08-08" />
+              </label>
+              <PresetButtons onSelect={() => undefined} />
+            </ReportToolbar>
+          </ReportSection>
+          <ReportSection
+            description="Stacked bars communicate roster composition; hatched Absent provides a non-color distinction."
+            title="Attendance over time (synthetic)"
+          >
+            <ChartFrame
+              description="Present and absent workers per operational date."
+              legend={[
+                { className: "bar-present", label: "Present" },
+                { className: "bar-absent", label: "Absent" },
+              ]}
+              meta="Last 14 days"
+              title="Attendance over time"
+            >
+              <BarChart
+                data={[
+                  {
+                    label: "2026-08-05",
+                    fullLabel: "2026-08-05",
+                    values: { present: 30, absent: 4 },
+                  },
+                  {
+                    label: "2026-08-06",
+                    fullLabel: "2026-08-06",
+                    values: { present: 34, absent: 2 },
+                  },
+                  {
+                    label: "2026-08-07",
+                    fullLabel: "2026-08-07",
+                    values: { present: 41, absent: 5 },
+                  },
+                ]}
+                description="Present and absent workers per operational date."
+                formatValue={(value) =>
+                  new Intl.NumberFormat("en-US").format(value)
+                }
+                series={[
+                  {
+                    className: "bar-present",
+                    key: "present",
+                    label: "Present",
+                  },
+                  { className: "bar-absent", key: "absent", label: "Absent" },
+                ]}
+                stacked
+              />
+            </ChartFrame>
+          </ReportSection>
+          <ReportSection
+            description="One unit per chart; the empty frame explains what will appear."
+            title="Harvest over time (synthetic)"
+          >
+            <ChartFrame
+              actions={
+                <label className="chart-select">
+                  <span className="sr-only">Harvest unit</span>
+                  <select
+                    className="select-input select-input-compact"
+                    defaultValue="fruit_count"
+                  >
+                    <option value="fruit_count">Fruit count</option>
+                    <option value="kilograms">Kilograms</option>
+                  </select>
+                </label>
+              }
+              description="Submitted fruit count quantity per operational date."
+              meta="Last 14 days · fruit"
+              title="Harvest over time"
+            >
+              <BarChart
+                data={[
+                  {
+                    label: "2026-08-05",
+                    fullLabel: "2026-08-05",
+                    values: { quantity: 4200 },
+                  },
+                  {
+                    label: "2026-08-06",
+                    fullLabel: "2026-08-06",
+                    values: { quantity: 6100 },
+                  },
+                  {
+                    label: "2026-08-07",
+                    fullLabel: "2026-08-07",
+                    values: { quantity: 12450 },
+                  },
+                ]}
+                description="Submitted fruit count quantity per operational date."
+                formatValue={(value) =>
+                  new Intl.NumberFormat("en-US").format(value)
+                }
+                series={[
+                  { className: "bar-harvest", key: "quantity", label: "fruit" },
+                ]}
+              />
+            </ChartFrame>
+            <ChartFrame
+              description="Exact FarmUnit totals for one unit."
+              empty
+              emptyMessage="No submitted Harvest in the last 14 days. The trend appears here after records are submitted."
+              meta="Last 14 days"
+              title="Harvest over time · empty"
+            />
+          </ReportSection>
+          <ReportSection
+            description="Exact FarmUnit comparison, one unit per chart."
+            title="Harvest by FarmUnit (synthetic)"
+          >
+            <HarvestBars
+              comparison={[
+                {
+                  label: "BLOCK-1",
+                  context: "2 records · Block One",
+                  value: 12450,
+                },
+                {
+                  label: "BLOCK-2",
+                  context: "1 record · Block Two",
+                  value: 6100,
+                },
+                {
+                  label: "FIELD-2",
+                  context: "1 record · Field Two",
+                  value: 4200,
+                },
+              ]}
+              unit="fruit_count"
+            />
+          </ReportSection>
         </section>
 
         <section

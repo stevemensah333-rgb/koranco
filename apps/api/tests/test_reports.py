@@ -4,11 +4,10 @@ import io
 from typing import Any, cast
 
 import pytest
-from httpx import ASGITransport, AsyncClient, Response
+from httpx import AsyncClient, Response
 from sqlalchemy import delete, select
 
 from koranco.db.session import SessionFactory
-from koranco.farm_structure.models import FarmUnit
 from koranco.identity.models import (
     ApplicationSession,
     ApplicationUser,
@@ -16,13 +15,17 @@ from koranco.identity.models import (
     SecurityEvent,
     UserPermission,
 )
-from koranco.identity.passwords import hash_password
-from koranco.identity.permissions import Role, permissions_for_role
-from koranco.main import app
+from koranco.identity.permissions import Role
 from koranco.workers.models import Worker
+from tests.helpers import (
+    ORIGIN,
+    add_farm_unit,
+    add_user,
+    add_worker,
+    client_for,
+    write,
+)
 
-ORIGIN = "http://test"
-PASSWORD = "a long example password"
 DATE_A = "2026-08-05"
 DATE_B = "2026-08-07"
 
@@ -37,64 +40,14 @@ def clean_identity() -> None:
         db.execute(delete(ApplicationUser))
 
 
-def add_user(login: str, role: Role) -> ApplicationUser:
-    with SessionFactory.begin() as db:
-        user = ApplicationUser(
-            login_identifier=login,
-            display_name=login.title(),
-            password_hash=hash_password(PASSWORD),
-            status="active",
-            role=role,
-        )
-        user.permissions.extend(UserPermission(permission=p) for p in permissions_for_role(role))
-        db.add(user)
-        db.flush()
-        db.expunge(user)
-        return user
-
-
-def add_worker(code: str, full_name: str, actor_id: Any) -> Worker:
-    with SessionFactory.begin() as db:
-        worker = Worker(
-            worker_code=code,
-            full_name=full_name,
-            status="active",
-            created_by=actor_id,
-            updated_by=actor_id,
-        )
-        db.add(worker)
-        db.flush()
-        db.expunge(worker)
-        return worker
-
-
-def add_farm_unit(
-    code: str, name: str, unit_type: str, actor_id: Any, parent_id: Any = None
-) -> FarmUnit:
-    with SessionFactory.begin() as db:
-        unit = FarmUnit(
-            code=code,
-            name=name,
-            unit_type=unit_type,
-            parent_id=parent_id,
-            status="active",
-            created_by=actor_id,
-            updated_by=actor_id,
-        )
-        db.add(unit)
-        db.flush()
-        db.expunge(unit)
-        return unit
-
-
 def setup() -> dict[str, Any]:
     manager = add_user("manager", Role.MANAGER)
     add_user("supervisor", Role.SUPERVISOR)
     add_user("app.worker", Role.WORKER)
     workers = [
-        add_worker("KOR-1", "Ama Mensah", manager.id),
-        add_worker("KOR-2", "Kofi Boateng", manager.id),
-        add_worker("KOR-3", "Esi Owusu", manager.id),
+        add_worker("KOR-1", manager.id, full_name="Ama Mensah"),
+        add_worker("KOR-2", manager.id, full_name="Kofi Boateng"),
+        add_worker("KOR-3", manager.id, full_name="Esi Owusu"),
     ]
     field = add_farm_unit("FIELD-1", "Field One", "field", manager.id)
     block = add_farm_unit("BLOCK-1", "Block One", "block", manager.id, parent_id=field.id)
@@ -105,29 +58,6 @@ def setup() -> dict[str, Any]:
         "standalone": standalone,
         "workers": workers,
     }
-
-
-async def client_for(login: str) -> AsyncClient:
-    client = AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN)
-    assert (
-        await client.post(
-            "/api/v1/auth/login",
-            headers={"Origin": ORIGIN},
-            json={"login_identifier": login, "password": PASSWORD},
-        )
-    ).status_code == 200
-    return client
-
-
-async def write(
-    client: AsyncClient, method: str, path: str, payload: dict[str, Any] | None = None
-) -> Response:
-    return await client.request(
-        method,
-        path,
-        headers={"Origin": ORIGIN, "X-CSRF-Token": client.cookies["koranco_csrf"]},
-        json=payload,
-    )
 
 
 async def submit_attendance(
@@ -346,6 +276,7 @@ def test_empty_results_distinguish_zero_from_data() -> None:
         assert body["present_count"] == 0
         assert body["absent_count"] == 0
         assert body["roster_count"] == 0
+        assert body["by_date"] == []
         assert body["sessions"] == []
         harv = await client.get(
             "/api/v1/reports/harvest", params={"date_from": "2026-01-01", "date_to": "2026-01-31"}
@@ -353,6 +284,7 @@ def test_empty_results_distinguish_zero_from_data() -> None:
         assert harv.status_code == 200
         assert harv.json()["submitted_record_count"] == 0
         assert harv.json()["by_unit"] == []
+        assert harv.json()["by_date"] == []
         await client.aclose()
 
     asyncio.run(flow())
@@ -399,6 +331,108 @@ def test_overview_totals_and_recent_activity() -> None:
         assert payload["harvest"]["by_unit"][0]["quantity"] == "5.000"
         assert len(payload["recent_attendance"]) == 1
         assert len(payload["recent_harvest"]) == 1
+        # The overview also carries the bounded date series and exact-FarmUnit
+        # breakdown for the selected date.
+        assert payload["attendance_by_date"] == [
+            {
+                "date": DATE_B,
+                "submitted_sessions": 1,
+                "present_count": 1,
+                "absent_count": 1,
+                "roster_count": 2,
+            }
+        ]
+        assert payload["harvest_by_date"] == [
+            {
+                "date": DATE_B,
+                "unit": "fruit_count",
+                "record_count": 1,
+                "quantity": "5.000",
+            }
+        ]
+        assert len(payload["harvest_by_farm_unit"]) == 1
+        assert payload["harvest_by_farm_unit"][0]["farm_unit_code"] == "BLOCK-1"
+        await client.aclose()
+
+    asyncio.run(flow())
+
+
+def test_attendance_report_by_date_series() -> None:
+    data = setup()
+    w = data["workers"]
+
+    async def flow() -> None:
+        client = await client_for("manager")
+        await submit_attendance(client, DATE_A, [w[0], w[1]], ["present", "absent"])
+        await submit_attendance(client, DATE_B, [w[0], w[2]], ["present", "present"])
+        result = await client.get(
+            "/api/v1/reports/attendance", params={"date_from": DATE_A, "date_to": DATE_B}
+        )
+        payload = result.json()
+        by_date = {row["date"]: row for row in payload["by_date"]}
+        assert set(by_date) == {DATE_A, DATE_B}
+        assert by_date[DATE_A]["submitted_sessions"] == 1
+        assert by_date[DATE_A]["present_count"] == 1
+        assert by_date[DATE_A]["absent_count"] == 1
+        assert by_date[DATE_A]["roster_count"] == 2
+        assert by_date[DATE_B]["submitted_sessions"] == 1
+        assert by_date[DATE_B]["present_count"] == 2
+        assert by_date[DATE_B]["absent_count"] == 0
+        assert by_date[DATE_B]["roster_count"] == 2
+        await client.aclose()
+
+    asyncio.run(flow())
+
+
+def test_harvest_report_by_date_series_keeps_units_separate() -> None:
+    data = setup()
+    block = data["block"]
+
+    async def flow() -> None:
+        client = await client_for("manager")
+        # Same day, both units: must yield two independent series rows.
+        await submit_harvest(client, DATE_A, block.id, "12", "fruit_count", "Block One")
+        await submit_harvest(client, DATE_A, block.id, "840.500", "kilograms", "Block One")
+        await submit_harvest(client, DATE_B, block.id, "7", "fruit_count", "Block One")
+        result = await client.get(
+            "/api/v1/reports/harvest", params={"date_from": DATE_A, "date_to": DATE_B}
+        )
+        payload = result.json()
+        assert len(payload["by_date"]) == 3
+        by_day_unit = {(row["date"], row["unit"]): row for row in payload["by_date"]}
+        assert by_day_unit[(DATE_A, "fruit_count")]["quantity"] == "12.000"
+        assert by_day_unit[(DATE_A, "fruit_count")]["record_count"] == 1
+        assert by_day_unit[(DATE_A, "kilograms")]["quantity"] == "840.500"
+        assert by_day_unit[(DATE_B, "fruit_count")]["quantity"] == "7.000"
+        # A cross-unit sum for DATE_A (852.5) must never appear anywhere.
+        assert "852.500" not in str(payload["by_date"])
+        filtered = await client.get(
+            "/api/v1/reports/harvest",
+            params={"date_from": DATE_A, "date_to": DATE_B, "unit": "fruit_count"},
+        )
+        assert len(filtered.json()["by_date"]) == 2
+        await client.aclose()
+
+    asyncio.run(flow())
+
+
+def test_overview_series_window_and_days_bound() -> None:
+    data = setup()
+    w = data["workers"]
+
+    async def flow() -> None:
+        client = await client_for("manager")
+        await submit_attendance(client, DATE_A, [w[0]], ["present"])
+        # A window that excludes DATE_A must not include it in the series.
+        single = await client.get("/api/v1/reports/overview", params={"date": DATE_B, "days": 1})
+        assert single.status_code == 200
+        assert single.json()["attendance_by_date"] == []
+        window = await client.get("/api/v1/reports/overview", params={"date": DATE_B, "days": 5})
+        assert [row["date"] for row in window.json()["attendance_by_date"]] == [DATE_A]
+        out_of_bounds = await client.get(
+            "/api/v1/reports/overview", params={"date": DATE_B, "days": 0}
+        )
+        assert out_of_bounds.status_code == 422
         await client.aclose()
 
     asyncio.run(flow())
@@ -450,7 +484,7 @@ def test_csv_export_correctness_and_escaping() -> None:
     data = setup()
     w = data["workers"]
     block = data["block"]
-    add_worker("KOR-4", 'Na, "Doe"\nLine', data["manager"].id)
+    add_worker("KOR-4", data["manager"].id, full_name='Na, "Doe"\nLine')
 
     async def flow() -> None:
         client = await client_for("manager")
@@ -499,10 +533,10 @@ def test_csv_export_correctness_and_escaping() -> None:
 def test_csv_formula_injection_protection() -> None:
     data = setup()
     w = data["workers"]
-    eq = add_worker("KOR-5", "=2+2", data["manager"].id)
-    at = add_worker("KOR-6", "@SUM(A1)", data["manager"].id)
-    plus = add_worker("KOR-7", "+cmd", data["manager"].id)
-    minus = add_worker("KOR-8", "-x", data["manager"].id)
+    eq = add_worker("KOR-5", data["manager"].id, full_name="=2+2")
+    at = add_worker("KOR-6", data["manager"].id, full_name="@SUM(A1)")
+    plus = add_worker("KOR-7", data["manager"].id, full_name="+cmd")
+    minus = add_worker("KOR-8", data["manager"].id, full_name="-x")
 
     async def flow() -> None:
         client = await client_for("manager")

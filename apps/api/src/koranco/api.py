@@ -1,15 +1,13 @@
-from typing import Annotated, Literal
+from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import Session
 
-from koranco.db.session import get_db_session
+from koranco.db.session import DatabaseSession
 
 router = APIRouter(prefix="/api/v1")
-DatabaseSession = Annotated[Session, Depends(get_db_session)]
 
 
 class StatusResponse(BaseModel):

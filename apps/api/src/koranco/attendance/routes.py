@@ -27,9 +27,9 @@ from koranco.attendance.service import (
     update_draft,
 )
 from koranco.attendance.sync import ingest_sync_operation
+from koranco.db.session import DatabaseSession
 from koranco.identity.dependencies import (
     AuthContext,
-    DatabaseSession,
     require_csrf,
     require_permission,
 )

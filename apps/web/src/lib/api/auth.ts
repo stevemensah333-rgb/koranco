@@ -58,6 +58,11 @@ export function csrfHeaders(): Record<string, string> {
   return { "X-CSRF-Token": csrfToken };
 }
 
+// Every successful server-side validation (login or session check) refreshes
+// the non-secret offline lease in IndexedDB. The lease is what authorizes
+// temporary same-user offline capture without storing any credential (see
+// docs/architecture/offline-sync.md); it intentionally lives outside the
+// authentication module's storage.
 async function preserveOfflineAuthorization(user: AuthenticatedUser) {
   if (
     typeof window !== "undefined" &&

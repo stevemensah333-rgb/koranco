@@ -1,5 +1,16 @@
 "use client";
 
+/**
+ * Harvest workspace: online draft/edit/submit/correct plus offline capture and
+ * sync for one record. This component is intentionally large because it owns
+ * one cohesive workflow with many small states; the offline behaviors live in
+ * `modules/attendance/offline/db.ts` (shared stores) and `offline/sync.ts`,
+ * and online API calls in `../api.ts`. Add a field here by following the
+ * existing form-state -> `HarvestValues` -> API -> server-schema chain; the
+ * same field must also be mapped in `offline/db.ts`
+ * (cacheServerHarvestDraft / queueHarvestSubmission / the local draft type)
+ * if it participates in offline capture.
+ */
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";

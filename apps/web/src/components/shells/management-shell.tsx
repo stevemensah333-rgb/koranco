@@ -1,12 +1,7 @@
 import type { ReactNode } from "react";
 
 import { ApplicationIdentity } from "./application-identity";
-
-export type ManagementNavItem = {
-  current?: boolean;
-  href: string;
-  label: string;
-};
+import type { ManagementNavItem } from "./management-navigation";
 
 type ManagementShellProps = {
   children: ReactNode;

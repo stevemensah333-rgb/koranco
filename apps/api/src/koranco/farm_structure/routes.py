@@ -2,10 +2,10 @@ import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from pydantic import BaseModel, Field
 from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 
+from koranco.db.session import DatabaseSession
 from koranco.farm_structure.models import FarmUnit
 from koranco.farm_structure.schemas import (
     FarmUnitCreateRequest,
@@ -13,11 +13,16 @@ from koranco.farm_structure.schemas import (
     FarmUnitResponse,
     FarmUnitType,
     FarmUnitUpdateRequest,
+    LifecycleRequest,
 )
-from koranco.farm_structure.service import create_unit, load_unit, set_unit_status, update_unit
+from koranco.farm_structure.service import (
+    change_unit_status,
+    create_unit,
+    load_unit,
+    update_unit,
+)
 from koranco.identity.dependencies import (
     AuthContext,
-    DatabaseSession,
     require_csrf,
     require_permission,
 )
@@ -135,23 +140,6 @@ def edit_unit(
     return response(unit)
 
 
-class LifecycleRequest(BaseModel):
-    reason: str | None = Field(default=None, max_length=500)
-
-
-def change_status(
-    unit_id: uuid.UUID,
-    status: str,
-    payload: LifecycleRequest,
-    request: Request,
-    db: DatabaseSession,
-    auth: AuthContext,
-) -> FarmUnitResponse:
-    unit = load_unit(db, unit_id, for_update=True)
-    set_unit_status(db, auth.user, unit, status, request.state.request_id, payload.reason)
-    return response(unit)
-
-
 @router.post("/{unit_id}/deactivate", response_model=FarmUnitResponse)
 def deactivate(
     unit_id: uuid.UUID,
@@ -163,7 +151,15 @@ def deactivate(
         AuthContext, Depends(require_permission(Permission.FARM_STRUCTURE_DEACTIVATE))
     ],
 ) -> FarmUnitResponse:
-    return change_status(unit_id, "inactive", payload, request, db, auth)
+    unit = change_unit_status(
+        db,
+        auth.user,
+        unit_id,
+        "inactive",
+        request.state.request_id,
+        payload.reason,
+    )
+    return response(unit)
 
 
 @router.post("/{unit_id}/reactivate", response_model=FarmUnitResponse)
@@ -177,7 +173,15 @@ def reactivate(
         AuthContext, Depends(require_permission(Permission.FARM_STRUCTURE_DEACTIVATE))
     ],
 ) -> FarmUnitResponse:
-    return change_status(unit_id, "active", payload, request, db, auth)
+    unit = change_unit_status(
+        db,
+        auth.user,
+        unit_id,
+        "active",
+        request.state.request_id,
+        payload.reason,
+    )
+    return response(unit)
 
 
 @router.get("/{unit_id}/audit", response_model=AuditEventListResponse)

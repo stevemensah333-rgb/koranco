@@ -1,3 +1,12 @@
+"""Durable ingestion of offline Harvest submissions (ADR-009).
+
+This is deliberately a per-domain copy of the sync protocol also implemented
+for Attendance in ``attendance/sync.py``: ownership isolation, transport
+idempotency, and no-last-write-wins. Keep both files in lockstep when the
+protocol changes; do not generalize into a shared sync framework without a new
+ADR (a third offline domain is not confirmed).
+"""
+
 import logging
 
 from fastapi import HTTPException
@@ -83,7 +92,9 @@ def ingest_sync_operation(
     actor: ApplicationUser,
     request_id: str | None,
 ) -> HarvestSyncResponse:
-    # advisory lock to serialize identical operation processing
+    # Serialize concurrent identical operations: the advisory lock (derived from
+    # the stable operation id) plus the processed-operation row below make
+    # response-loss retries idempotent at the transport level.
     db.execute(
         text("SELECT pg_advisory_xact_lock(hashtextextended(:operation_id, 0))"),
         {"operation_id": str(payload.operation_id)},

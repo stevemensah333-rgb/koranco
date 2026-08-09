@@ -3,7 +3,6 @@ import uuid
 from typing import Any
 
 import pytest
-from httpx import ASGITransport, AsyncClient
 from sqlalchemy import delete, select
 
 from koranco.db.session import SessionFactory
@@ -18,11 +17,9 @@ from koranco.identity.models import (
 )
 from koranco.identity.passwords import hash_password
 from koranco.identity.permissions import Role, permissions_for_role
-from koranco.main import app
 from koranco.operational_audit.models import OperationalAuditEvent
+from tests.helpers import ORIGIN, PASSWORD, client_for
 
-ORIGIN = "http://test"
-PASSWORD = "a long example password"
 TODAY = "2026-08-07"
 
 
@@ -73,18 +70,6 @@ def setup() -> tuple[ApplicationUser, FarmUnit]:
         db.expunge(users[0])
         db.expunge(field)
         return users[0], field
-
-
-async def client_for(login: str) -> AsyncClient:
-    client = AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN)
-    assert (
-        await client.post(
-            "/api/v1/auth/login",
-            headers={"Origin": ORIGIN},
-            json={"login_identifier": login, "password": PASSWORD},
-        )
-    ).status_code == 200
-    return client
 
 
 def make_payload(

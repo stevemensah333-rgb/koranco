@@ -9,7 +9,6 @@ const listFarmUnits = vi.fn();
 vi.mock("@/lib/api/auth", () => ({ getCurrentSession: () => session() }));
 vi.mock("@/modules/reports/api", () => ({
   getHarvestReport: (...a: unknown[]) => getHarvestReport(...a),
-  buildExportUrl: () => "http://api/api/v1/reports/exports/harvest",
   downloadCsv: vi.fn(),
 }));
 vi.mock("@/modules/farm-structure/api", () => ({
@@ -32,6 +31,20 @@ const report = {
   by_unit: [
     { unit: "fruit_count", record_count: 2, quantity: "12450.000" },
     { unit: "kilograms", record_count: 1, quantity: "840.500" },
+  ],
+  by_date: [
+    {
+      date: "2026-08-08",
+      unit: "fruit_count",
+      record_count: 2,
+      quantity: "12450.000",
+    },
+    {
+      date: "2026-08-08",
+      unit: "kilograms",
+      record_count: 1,
+      quantity: "840.500",
+    },
   ],
   by_farm_unit: [
     {
@@ -85,12 +98,22 @@ beforeEach(() => {
 });
 
 describe("HarvestReport", () => {
-  it("renders unit-separated totals and the by-FarmUnit table", async () => {
+  it("renders unit-separated totals, the over-time chart, and the by-FarmUnit comparison", async () => {
     render(<HarvestReport />);
-    expect((await screen.findAllByText("12450.000")).length).toBeGreaterThan(0);
-    expect((await screen.findAllByText("840.500")).length).toBeGreaterThan(0);
-    // The two units must stay independent: no cross-unit total appears.
+    expect((await screen.findAllByText("12,450")).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("840.5").length).toBeGreaterThan(0);
+    // The two units must stay independent: no cross-unit total anywhere.
+    expect(screen.queryByText("13,290.5")).not.toBeInTheDocument();
     expect(screen.queryByText("13290.500")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Harvest over time" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "By FarmUnit" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("list", { name: "Harvest by FarmUnit" }),
+    ).toBeInTheDocument();
     const table = await screen.findByRole("table", {
       name: "Harvest totals by FarmUnit",
     });
@@ -104,6 +127,16 @@ describe("HarvestReport", () => {
     );
   });
 
+  it("switches the chart unit without ever mixing units", async () => {
+    render(<HarvestReport />);
+    await screen.findByRole("table", { name: "Harvest totals by FarmUnit" });
+    const unitSelect = screen.getByLabelText("Harvest unit");
+    expect(unitSelect).toHaveValue("fruit_count");
+    fireEvent.change(unitSelect, { target: { value: "kilograms" } });
+    // Fruit bars disappear; only the kg chart remains for the selected unit.
+    await waitFor(() => expect(unitSelect).toHaveValue("kilograms"));
+  });
+
   it("shows the export button for Manager", async () => {
     render(<HarvestReport />);
     expect(
@@ -111,7 +144,7 @@ describe("HarvestReport", () => {
     ).toBeInTheDocument();
   });
 
-  it("refetches when the unit filter changes", async () => {
+  it("refetches when the server-side unit filter changes", async () => {
     render(<HarvestReport />);
     await screen.findByRole("table", { name: "Harvest totals by FarmUnit" });
     const unitSelect = screen.getByLabelText("Unit");
@@ -123,11 +156,12 @@ describe("HarvestReport", () => {
     );
   });
 
-  it("shows a no-records state", async () => {
+  it("shows an intentional no-records state", async () => {
     getHarvestReport.mockResolvedValue({
       ...report,
       submitted_record_count: 0,
       by_unit: [],
+      by_date: [],
       by_farm_unit: [],
       records: [],
     });

@@ -52,3 +52,30 @@ Before adding a dependency, identify the requirement and prefer mature, maintain
 
 Update documentation when architecture changes and use ADRs for significant decisions, not trivial details. Assume future maintainers have only this repository, its documentation, and standard engineering knowledge—not this conversation, the original team, Codex, or undocumented context.
 
+## Maintainability over sophistication
+
+Koranco must remain maintainable after handover by engineers who may have no
+knowledge of the original implementation process and no access to
+AI-generated development context.
+
+- Prefer the simplest implementation that safely satisfies confirmed
+  requirements.
+- Do not introduce abstractions, architectural layers, wrappers, generic
+  frameworks, factories, interfaces, helpers, indirection, or defensive
+  machinery merely because they could be useful later. Every non-obvious
+  abstraction must solve a demonstrated problem.
+- Handle realistic failure modes rigorously, especially where they affect
+  security, authorization, data integrity, financial/operational records,
+  offline synchronization, auditability, and recovery.
+- Do not add complexity solely to defend against highly hypothetical internal
+  states with negligible operational likelihood.
+- Prefer explicit, boring, conventional framework code over clever code. A
+  competent engineer familiar with FastAPI, SQLAlchemy, PostgreSQL, React, and
+  Next.js should be able to trace normal behavior without repository
+  archaeology.
+- Before adding a new abstraction, first ask whether the requirement can be
+  expressed clearly using (1) the framework's standard primitives and (2) the
+  project's existing domain structure.
+- Comment WHY non-obvious behavior exists, not WHAT obvious code does.
+- Do not optimize for fewer lines at the expense of correctness.
+

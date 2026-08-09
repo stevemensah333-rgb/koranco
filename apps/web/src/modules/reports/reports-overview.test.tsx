@@ -9,7 +9,6 @@ const downloadCsv = vi.fn();
 vi.mock("@/lib/api/auth", () => ({ getCurrentSession: () => session() }));
 vi.mock("@/modules/reports/api", () => ({
   getOverview: (...a: unknown[]) => getOverview(...a),
-  buildExportUrl: () => "http://api/api/v1/reports/exports/attendance",
   downloadCsv: (...a: unknown[]) => downloadCsv(...a),
 }));
 
@@ -48,6 +47,41 @@ const overviewData = {
       { unit: "kilograms", record_count: 1, quantity: "840.500" },
     ],
   },
+  attendance_by_date: [
+    {
+      date: "2026-08-08",
+      submitted_sessions: 2,
+      present_count: 14,
+      absent_count: 3,
+      roster_count: 17,
+    },
+  ],
+  harvest_by_date: [
+    {
+      date: "2026-08-08",
+      unit: "fruit_count",
+      record_count: 2,
+      quantity: "12450.000",
+    },
+    {
+      date: "2026-08-08",
+      unit: "kilograms",
+      record_count: 1,
+      quantity: "840.500",
+    },
+  ],
+  harvest_by_farm_unit: [
+    {
+      farm_unit_id: "f1",
+      farm_unit_code: "BLOCK-1",
+      farm_unit_name: "Block One",
+      farm_unit_type: "block",
+      record_count: 2,
+      by_unit: [
+        { unit: "fruit_count", record_count: 2, quantity: "12450.000" },
+      ],
+    },
+  ],
   recent_attendance: [
     {
       id: "s1",
@@ -81,13 +115,23 @@ beforeEach(() => {
 });
 
 describe("ReportsOverview", () => {
-  it("renders loading then the Today summary and recent activity", async () => {
+  it("renders loading then the Today summary, charts, and recent activity", async () => {
     render(<ReportsOverview />);
     expect(screen.getByText("Checking reports access…")).toBeInTheDocument();
     expect(await screen.findByText("Today · 2026-08-08")).toBeInTheDocument();
-    expect(screen.getByText("Submitted sessions")).toBeInTheDocument();
-    expect((await screen.findAllByText("12450.000")).length).toBeGreaterThan(0);
-    expect((await screen.findAllByText("840.500")).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Sessions").length).toBeGreaterThan(0);
+    // Harvest quantities are formatted and unit-labelled, never combined.
+    // (Values also appear in the charts' accessible tables, hence getAllByText.)
+    expect(screen.getAllByText("12,450").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("840.5").length).toBeGreaterThan(0);
+    expect(screen.queryByText("13,290.5")).not.toBeInTheDocument();
+    // Trend charts render with their data tables.
+    expect(
+      screen.getByRole("heading", { name: "Attendance over time" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Harvest over time" }),
+    ).toBeInTheDocument();
     expect(
       await screen.findByRole("table", {
         name: "Recent submitted attendance sessions",
@@ -136,7 +180,7 @@ describe("ReportsOverview", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows a no-data state when there are no records", async () => {
+  it("shows an intentional zero-data state when there are no records", async () => {
     getOverview.mockResolvedValue({
       date: "2026-08-08",
       attendance: {
@@ -146,6 +190,9 @@ describe("ReportsOverview", () => {
         roster_count: 0,
       },
       harvest: { submitted_records: 0, by_unit: [] },
+      attendance_by_date: [],
+      harvest_by_date: [],
+      harvest_by_farm_unit: [],
       recent_attendance: [],
       recent_harvest: [],
     });
@@ -157,6 +204,13 @@ describe("ReportsOverview", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText("No submitted Harvest records are recorded yet."),
+    ).toBeInTheDocument();
+    // The chart frames explain what will appear instead of empty axes.
+    expect(
+      screen.getByText(/The trend appears here after sessions are recorded/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/The trend appears here after records are submitted/),
     ).toBeInTheDocument();
   });
 
@@ -175,5 +229,17 @@ describe("ReportsOverview", () => {
     });
     fireEvent.click(button);
     await waitFor(() => expect(downloadCsv).toHaveBeenCalled());
+  });
+
+  it("refetches when the operational date filter changes", async () => {
+    render(<ReportsOverview />);
+    await screen.findByText("Today · 2026-08-08");
+    const dateInput = screen.getByLabelText("Operational date");
+    fireEvent.change(dateInput, { target: { value: "2026-08-01" } });
+    await waitFor(() =>
+      expect(getOverview).toHaveBeenCalledWith(
+        expect.objectContaining({ date: "2026-08-01", days: 14 }),
+      ),
+    );
   });
 });

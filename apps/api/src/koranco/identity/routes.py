@@ -4,11 +4,11 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 
 from koranco.config.settings import get_settings
+from koranco.db.session import DatabaseSession
 from koranco.identity.cookies import clear_auth_cookies, set_auth_cookies
 from koranco.identity.dependencies import (
     AuthContext,
     Authenticated,
-    DatabaseSession,
     require_csrf,
     require_permission,
     require_trusted_origin,

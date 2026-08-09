@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import func, select
 from sqlalchemy.orm import joinedload
 
+from koranco.db.session import DatabaseSession
 from koranco.harvest.models import HarvestRecord
 from koranco.harvest.schemas import (
     CorrectHarvestRequest,
@@ -29,7 +30,6 @@ from koranco.harvest.service import (
 from koranco.harvest.sync import ingest_sync_operation
 from koranco.identity.dependencies import (
     AuthContext,
-    DatabaseSession,
     require_csrf,
     require_permission,
 )

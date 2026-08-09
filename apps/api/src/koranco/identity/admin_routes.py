@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 
+from koranco.db.session import DatabaseSession
 from koranco.identity.admin_schemas import (
     ChangeOwnPasswordRequest,
     CreateUserRequest,
@@ -28,7 +29,6 @@ from koranco.identity.administration import (
 )
 from koranco.identity.dependencies import (
     AuthContext,
-    DatabaseSession,
     require_csrf,
     require_permission,
 )

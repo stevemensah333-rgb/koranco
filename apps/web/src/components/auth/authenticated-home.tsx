@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { LoadingIndicator } from "@/components/ui/loading-indicator";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { ManagementOverview } from "@/modules/reports/management-overview";
 import { ApiError } from "@/lib/api/client";
 import {
   type AuthenticatedUser,
@@ -114,6 +115,33 @@ export function AuthenticatedHome() {
           <LoadingIndicator label="Checking your session…" />
         )}
       </main>
+    );
+  }
+
+  if (user.permissions.includes("reports.read")) {
+    return (
+      <ManagementShell
+        navigation={managementNavigation(user, "/")}
+        utility={
+          <div className="session-utility">
+            <span className="session-identity">{user.display_name}</span>
+            <Button
+              disabled={logoutPending}
+              onClick={handleLogout}
+              variant="secondary"
+            >
+              {logoutPending ? "Signing out…" : "Sign out"}
+            </Button>
+          </div>
+        }
+      >
+        {logoutError ? (
+          <Alert title="Sign-out failed" tone="error">
+            {logoutError}
+          </Alert>
+        ) : null}
+        <ManagementOverview apiStatus={status} />
+      </ManagementShell>
     );
   }
 

@@ -38,9 +38,3 @@ export async function apiRequest<ResponseBody>(
   if (response.status === 204) return undefined as ResponseBody;
   return (await response.json()) as ResponseBody;
 }
-
-export async function getApiHealth(
-  signal?: AbortSignal,
-): Promise<{ status: "ok" }> {
-  return apiRequest("/api/v1/health", { signal });
-}

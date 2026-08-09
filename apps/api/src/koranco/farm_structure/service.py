@@ -9,6 +9,8 @@ from koranco.farm_structure.models import FarmUnit
 from koranco.identity.models import ApplicationUser
 from koranco.operational_audit.service import record_operational_event
 
+# Arbitrary unique key serializing FarmUnit hierarchy mutations so parent/cycle
+# validation cannot race with concurrent re-parenting (ADR-006).
 HIERARCHY_LOCK = 7_120_041
 
 
@@ -159,3 +161,17 @@ def set_unit_status(
         after=unit_state(unit),
         reason=reason,
     )
+
+
+def change_unit_status(
+    session: Session,
+    actor: ApplicationUser,
+    unit_id: uuid.UUID,
+    status: str,
+    request_id: str | None,
+    reason: str | None,
+) -> FarmUnit:
+    """Load, change, and return a FarmUnit's status in one HTTP-request unit."""
+    unit = load_unit(session, unit_id, for_update=True)
+    set_unit_status(session, actor, unit, status, request_id, reason)
+    return unit

@@ -8,7 +8,6 @@ const getAttendanceReport = vi.fn();
 vi.mock("@/lib/api/auth", () => ({ getCurrentSession: () => session() }));
 vi.mock("@/modules/reports/api", () => ({
   getAttendanceReport: (...a: unknown[]) => getAttendanceReport(...a),
-  buildExportUrl: () => "http://api/api/v1/reports/exports/attendance",
   downloadCsv: vi.fn(),
 }));
 
@@ -28,6 +27,22 @@ const report = {
   present_count: 14,
   absent_count: 3,
   roster_count: 17,
+  by_date: [
+    {
+      date: "2026-08-08",
+      submitted_sessions: 1,
+      present_count: 10,
+      absent_count: 2,
+      roster_count: 12,
+    },
+    {
+      date: "2026-08-01",
+      submitted_sessions: 1,
+      present_count: 4,
+      absent_count: 1,
+      roster_count: 5,
+    },
+  ],
   sessions: [
     {
       id: "s1",
@@ -50,14 +65,17 @@ beforeEach(() => {
 });
 
 describe("AttendanceReport", () => {
-  it("renders the summary and sessions table with drill-down", async () => {
+  it("renders totals, the over-time chart, and the sessions table with drill-down", async () => {
     render(<AttendanceReport />);
     expect(
       await screen.findByText(
-        "Date range 2026-08-01 to 2026-08-08 is inclusive and limited to submitted sessions.",
+        "Period 2026-08-01 – 2026-08-08 · inclusive, submitted sessions only",
       ),
     ).toBeInTheDocument();
     expect(screen.getByText("14")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Attendance over time" }),
+    ).toBeInTheDocument();
     const table = await screen.findByRole("table", {
       name: "Submitted attendance sessions in the selected range",
     });
@@ -87,13 +105,37 @@ describe("AttendanceReport", () => {
     await waitFor(() => expect(getAttendanceReport).toHaveBeenCalledTimes(2));
   });
 
+  it("applies a quick range preset to both date filters", async () => {
+    render(<AttendanceReport />);
+    await screen.findByRole("table", {
+      name: "Submitted attendance sessions in the selected range",
+    });
+    fireEvent.click(screen.getByRole("button", { name: "7 days" }));
+    await waitFor(() =>
+      expect(getAttendanceReport).toHaveBeenCalledWith(
+        expect.objectContaining({ dateFrom: expect.any(String) }),
+      ),
+    );
+  });
+
   it("shows a no-records state for an empty range", async () => {
-    getAttendanceReport.mockResolvedValue({ ...report, sessions: [] });
+    getAttendanceReport.mockResolvedValue({
+      ...report,
+      submitted_session_count: 0,
+      present_count: 0,
+      absent_count: 0,
+      roster_count: 0,
+      by_date: [],
+      sessions: [],
+    });
     render(<AttendanceReport />);
     expect(
       await screen.findByText(
         "No submitted Attendance sessions match this date range.",
       ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/The trend appears here after sessions are recorded/),
     ).toBeInTheDocument();
   });
 

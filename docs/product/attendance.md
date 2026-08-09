@@ -13,6 +13,11 @@ Attendance does not currently refer to a FarmUnit, crew, team, task, shift, payr
 - A session is `draft` or `submitted`.
 - Creating a draft never pre-marks a Worker. Active Workers must be deliberately added; “Mark all present” is a separate explicit action.
 - Draft roster changes are sent as one batch. Browser navigation warns while the displayed roster has unsaved changes.
+- Saving a draft **replaces the whole roster**: the server deletes and re-inserts
+  every entry, so entry UUIDs, creation times, and versions churn across draft
+  saves. Only the submitted state is stable (roster fingerprint + audit).
+  Per-entry upserts would add diffing complexity without protecting submitted
+  data; do not "optimize" the draft path into per-entry updates.
 - Every included Worker must be marked before submission, and an empty roster cannot be submitted.
 - Present entries may have optional `time_in` and `time_out`. Absent entries cannot have times. When both times exist, time out cannot precede time in.
 - Times are local wall-clock values for the explicit attendance date. Audit, creation, update, submission, and correction timestamps are authoritative server-recorded UTC instants.

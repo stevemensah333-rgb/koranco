@@ -72,13 +72,25 @@ def response(record: HarvestRecord) -> HarvestRecordResponse:
     )
 
 
-def require_farm_unit(db: Session, farm_unit_id: uuid.UUID, *, operational: bool) -> FarmUnit:
+def require_farm_unit_exists(db: Session, farm_unit_id: uuid.UUID) -> FarmUnit:
+    """Return the FarmUnit or reject with 422. Used for draft work, where an
+    inactive unit may still be referenced by an existing draft."""
     unit = db.get(FarmUnit, farm_unit_id)
     if unit is None:
         raise HTTPException(status_code=422, detail="The selected FarmUnit is unavailable")
-    if operational and unit.status != "active":
+    return unit
+
+
+def require_operational_farm_unit(db: Session, farm_unit_id: uuid.UUID) -> FarmUnit:
+    """Return an active, unambiguous FarmUnit or reject.
+
+    Submission and correction require an active unit. When an active Field has
+    active child Blocks, the Field is ambiguous and the user must select a
+    Block (see docs/product/harvest.md)."""
+    unit = require_farm_unit_exists(db, farm_unit_id)
+    if unit.status != "active":
         raise HTTPException(status_code=409, detail="The selected FarmUnit is inactive")
-    if operational and unit.unit_type == "field":
+    if unit.unit_type == "field":
         has_active_block = db.scalar(
             select(FarmUnit.id)
             .where(
@@ -111,7 +123,7 @@ def create_draft(
     request_id: str | None,
     record_id: uuid.UUID | None = None,
 ) -> HarvestRecord:
-    require_farm_unit(db, values.farm_unit_id, operational=False)
+    require_farm_unit_exists(db, values.farm_unit_id)
     record = HarvestRecord(id=record_id or uuid.uuid4(), created_by=actor.id)
     apply_values(record, values)
     db.add(record)
@@ -136,7 +148,7 @@ def update_draft(
         raise HTTPException(status_code=409, detail="Submitted harvest cannot be edited as a draft")
     if record.version != expected_version:
         raise HTTPException(status_code=409, detail="Harvest draft changed; reload before saving")
-    require_farm_unit(db, values.farm_unit_id, operational=False)
+    require_farm_unit_exists(db, values.farm_unit_id)
     apply_values(record, values)
     record.version += 1
     db.flush()
@@ -147,7 +159,7 @@ def submit_record(
 ) -> None:
     if record.status == "submitted":
         return
-    require_farm_unit(db, record.farm_unit_id, operational=True)
+    require_operational_farm_unit(db, record.farm_unit_id)
     before = harvest_state(record)
     record.status = "submitted"
     record.submitted_by = actor.id
@@ -181,7 +193,7 @@ def correct_record(
         raise HTTPException(
             status_code=409, detail="Harvest record changed; reload before correcting"
         )
-    require_farm_unit(db, values.farm_unit_id, operational=True)
+    require_operational_farm_unit(db, values.farm_unit_id)
     before = harvest_state(record)
     apply_values(record, values)
     record.version += 1

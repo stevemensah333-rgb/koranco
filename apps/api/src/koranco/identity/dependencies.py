@@ -5,10 +5,10 @@ from typing import Annotated
 
 from fastapi import Depends, HTTPException, Request
 from sqlalchemy import select
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import selectinload
 
 from koranco.config.settings import get_settings
-from koranco.db.session import get_db_session
+from koranco.db.session import DatabaseSession
 from koranco.identity.models import ApplicationSession, ApplicationUser
 from koranco.identity.permissions import Permission
 from koranco.identity.security import (
@@ -25,9 +25,6 @@ from koranco.identity.service import record_security_event
 class AuthContext:
     user: ApplicationUser
     session: ApplicationSession
-
-
-DatabaseSession = Annotated[Session, Depends(get_db_session)]
 
 
 def require_trusted_origin(request: Request) -> None:
@@ -53,6 +50,9 @@ def require_authenticated_user(request: Request, db: DatabaseSession) -> AuthCon
     ):
         raise HTTPException(status_code=401, detail="Authentication required")
     if application_session.user.status != "active":
+        # The request's outer transaction is otherwise read-only; commit here so
+        # the revocation of the disabled account's session and its audit event
+        # are durable before the request is rejected.
         application_session.revoked_at = now
         record_security_event(
             db,
