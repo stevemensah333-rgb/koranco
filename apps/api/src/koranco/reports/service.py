@@ -11,7 +11,9 @@ from koranco.harvest.models import HarvestRecord
 from koranco.harvest.schemas import HarvestUnit
 from koranco.identity.models import ApplicationUser
 from koranco.reports.schemas import (
+    AttendanceDateTotal,
     AttendanceSessionReport,
+    HarvestDateUnitTotal,
     HarvestFarmUnitTotal,
     HarvestSourceRecord,
     HarvestUnitTotal,
@@ -66,6 +68,40 @@ def attendance_totals(db: Session, date_from: date, date_to: date) -> dict[str, 
         "absent_count": int(row.absent_count),
         "roster_count": int(row.roster_count),
     }
+
+
+def attendance_by_date(db: Session, date_from: date, date_to: date) -> list[AttendanceDateTotal]:
+    """Per-operational-date Attendance totals over submitted sessions, newest first.
+
+    Aggregation is performed in PostgreSQL; the frontend never sums session rows.
+    """
+    statement = (
+        select(
+            AttendanceSession.attendance_date,
+            func.count(func.distinct(AttendanceSession.id)).label("submitted_sessions"),
+            func.count(AttendanceEntry.id)
+            .filter(AttendanceEntry.attendance_status == PRESENT)
+            .label("present_count"),
+            func.count(AttendanceEntry.id)
+            .filter(AttendanceEntry.attendance_status == ABSENT)
+            .label("absent_count"),
+            func.count(AttendanceEntry.id).label("roster_count"),
+        )
+        .join(AttendanceEntry, AttendanceEntry.attendance_session_id == AttendanceSession.id)
+        .where(*_attendance_where(date_from, date_to))
+        .group_by(AttendanceSession.attendance_date)
+        .order_by(AttendanceSession.attendance_date.desc())
+    )
+    return [
+        AttendanceDateTotal(
+            date=row.attendance_date,
+            submitted_sessions=int(row.submitted_sessions),
+            present_count=int(row.present_count),
+            absent_count=int(row.absent_count),
+            roster_count=int(row.roster_count),
+        )
+        for row in db.execute(statement).all()
+    ]
 
 
 def attendance_sessions(
@@ -140,6 +176,41 @@ def harvest_unit_totals(
     )
     return [
         HarvestUnitTotal(
+            unit=HarvestUnit(row.unit),
+            record_count=int(row.record_count),
+            quantity=row.quantity,
+        )
+        for row in db.execute(statement).all()
+    ]
+
+
+def harvest_by_date(
+    db: Session,
+    date_from: date,
+    date_to: date,
+    farm_unit_id: uuid.UUID | None,
+    unit: HarvestUnit | None,
+) -> list[HarvestDateUnitTotal]:
+    """Per-operational-date Harvest totals, grouped by (date, unit), newest first.
+
+    Each row belongs to exactly one unit, so the visualization layer can never
+    accidentally combine incompatible units: a date with both fruit and kg
+    yields two independent rows.
+    """
+    statement = (
+        select(
+            HarvestRecord.harvest_date,
+            HarvestRecord.unit,
+            func.count(HarvestRecord.id).label("record_count"),
+            func.sum(HarvestRecord.quantity).label("quantity"),
+        )
+        .where(*_harvest_where(date_from, date_to, farm_unit_id, unit))
+        .group_by(HarvestRecord.harvest_date, HarvestRecord.unit)
+        .order_by(HarvestRecord.harvest_date.desc(), HarvestRecord.unit)
+    )
+    return [
+        HarvestDateUnitTotal(
+            date=row.harvest_date,
             unit=HarvestUnit(row.unit),
             record_count=int(row.record_count),
             quantity=row.quantity,

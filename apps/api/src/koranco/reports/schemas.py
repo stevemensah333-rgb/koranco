@@ -15,6 +15,25 @@ class HarvestUnitTotal(BaseModel):
     quantity: Decimal
 
 
+class AttendanceDateTotal(BaseModel):
+    """One operational date's Attendance totals over submitted sessions."""
+
+    date: date
+    submitted_sessions: int
+    present_count: int
+    absent_count: int
+    roster_count: int
+
+
+class HarvestDateUnitTotal(BaseModel):
+    """One operational date's Harvest total for a single unit. Units are never combined."""
+
+    date: date
+    unit: HarvestUnit
+    record_count: int
+    quantity: Decimal
+
+
 class OverviewAttendance(BaseModel):
     submitted_sessions: int
     present_count: int
@@ -49,10 +68,24 @@ class RecentHarvestRecord(BaseModel):
     submitted_at: datetime | None
 
 
+class HarvestFarmUnitTotal(BaseModel):
+    """Harvest totals for one FarmUnit, keeping every unit separate."""
+
+    farm_unit_id: uuid.UUID
+    farm_unit_code: str
+    farm_unit_name: str
+    farm_unit_type: str
+    record_count: int
+    by_unit: list[HarvestUnitTotal]
+
+
 class OverviewResponse(BaseModel):
     date: date
     attendance: OverviewAttendance
     harvest: OverviewHarvest
+    attendance_by_date: list[AttendanceDateTotal]
+    harvest_by_date: list[HarvestDateUnitTotal]
+    harvest_by_farm_unit: list[HarvestFarmUnitTotal]
     recent_attendance: list[RecentAttendanceSession]
     recent_harvest: list[RecentHarvestRecord]
 
@@ -78,18 +111,8 @@ class AttendanceReportResponse(BaseModel):
     present_count: int
     absent_count: int
     roster_count: int
+    by_date: list[AttendanceDateTotal]
     sessions: list[AttendanceSessionReport]
-
-
-class HarvestFarmUnitTotal(BaseModel):
-    """Harvest totals for one FarmUnit, keeping every unit separate."""
-
-    farm_unit_id: uuid.UUID
-    farm_unit_code: str
-    farm_unit_name: str
-    farm_unit_type: str
-    record_count: int
-    by_unit: list[HarvestUnitTotal]
 
 
 class HarvestSourceRecord(BaseModel):
@@ -111,5 +134,6 @@ class HarvestReportResponse(BaseModel):
     date_to: date
     submitted_record_count: int
     by_unit: list[HarvestUnitTotal]
+    by_date: list[HarvestDateUnitTotal]
     by_farm_unit: list[HarvestFarmUnitTotal]
     records: list[HarvestSourceRecord]

@@ -22,7 +22,11 @@ export function managementNavigation(
     current === path || current.startsWith(`${path}/`);
 
   const items: ManagementNavItem[] = [
-    { href: "/", label: "System status", current: current === "/" },
+    {
+      href: "/",
+      label: can("reports.read") ? "Overview" : "System status",
+      current: current === "/",
+    },
   ];
   if (can("reports.read"))
     items.push({

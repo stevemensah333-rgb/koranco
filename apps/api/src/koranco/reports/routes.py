@@ -1,5 +1,5 @@
 import uuid
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
@@ -24,8 +24,10 @@ from koranco.reports.schemas import (
     RecentHarvestRecord,
 )
 from koranco.reports.service import (
+    attendance_by_date,
     attendance_sessions,
     attendance_totals,
+    harvest_by_date,
     harvest_by_farm_unit,
     harvest_record_count,
     harvest_source_records,
@@ -41,6 +43,8 @@ DEFAULT_SOURCE_LIMIT = 100
 MAX_EXPORT_LIMIT = 10_000
 DEFAULT_EXPORT_LIMIT = 10_000
 DEFAULT_RECENT_LIMIT = 10
+MAX_OVERVIEW_WINDOW_DAYS = 60
+DEFAULT_OVERVIEW_WINDOW_DAYS = 14
 
 
 def _today() -> date:
@@ -68,12 +72,17 @@ def overview(
     db: DatabaseSession,
     _auth: Annotated[AuthContext, Depends(require_permission(Permission.REPORTS_READ))],
     date: date | None = None,
+    days: Annotated[int, Query(ge=1, le=MAX_OVERVIEW_WINDOW_DAYS)] = DEFAULT_OVERVIEW_WINDOW_DAYS,
     recent: Annotated[int, Query(ge=1, le=50)] = DEFAULT_RECENT_LIMIT,
 ) -> OverviewResponse:
     op_date = date or _today()
+    window_start = op_date - timedelta(days=days - 1)
     attendance = attendance_totals(db, op_date, op_date)
     by_unit = harvest_unit_totals(db, op_date, op_date, None, None)
     harvest_count = harvest_record_count(db, op_date, op_date, None, None)
+    attendance_series = attendance_by_date(db, window_start, op_date)
+    harvest_series = harvest_by_date(db, window_start, op_date, None, None)
+    farm_unit_breakdown = harvest_by_farm_unit(db, op_date, op_date, None, None)
     recent_attendance = [
         RecentAttendanceSession(
             id=s.id,
@@ -104,6 +113,9 @@ def overview(
         date=op_date,
         attendance=OverviewAttendance(**attendance),
         harvest=OverviewHarvest(submitted_records=harvest_count, by_unit=by_unit),
+        attendance_by_date=attendance_series,
+        harvest_by_date=harvest_series,
+        harvest_by_farm_unit=farm_unit_breakdown,
         recent_attendance=recent_attendance,
         recent_harvest=recent_harvest,
     )
@@ -127,6 +139,7 @@ def attendance_report(
         present_count=totals["present_count"],
         absent_count=totals["absent_count"],
         roster_count=totals["roster_count"],
+        by_date=attendance_by_date(db, start, end),
         sessions=sessions,
     )
 
@@ -147,6 +160,7 @@ def harvest_report(
         date_to=end,
         submitted_record_count=harvest_record_count(db, start, end, farm_unit_id, unit),
         by_unit=harvest_unit_totals(db, start, end, farm_unit_id, unit),
+        by_date=harvest_by_date(db, start, end, farm_unit_id, unit),
         by_farm_unit=harvest_by_farm_unit(db, start, end, farm_unit_id, unit),
         records=harvest_source_records(db, start, end, farm_unit_id, unit, limit),
     )

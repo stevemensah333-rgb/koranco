@@ -346,6 +346,7 @@ def test_empty_results_distinguish_zero_from_data() -> None:
         assert body["present_count"] == 0
         assert body["absent_count"] == 0
         assert body["roster_count"] == 0
+        assert body["by_date"] == []
         assert body["sessions"] == []
         harv = await client.get(
             "/api/v1/reports/harvest", params={"date_from": "2026-01-01", "date_to": "2026-01-31"}
@@ -353,6 +354,7 @@ def test_empty_results_distinguish_zero_from_data() -> None:
         assert harv.status_code == 200
         assert harv.json()["submitted_record_count"] == 0
         assert harv.json()["by_unit"] == []
+        assert harv.json()["by_date"] == []
         await client.aclose()
 
     asyncio.run(flow())
@@ -399,6 +401,108 @@ def test_overview_totals_and_recent_activity() -> None:
         assert payload["harvest"]["by_unit"][0]["quantity"] == "5.000"
         assert len(payload["recent_attendance"]) == 1
         assert len(payload["recent_harvest"]) == 1
+        # The overview also carries the bounded date series and exact-FarmUnit
+        # breakdown for the selected date.
+        assert payload["attendance_by_date"] == [
+            {
+                "date": DATE_B,
+                "submitted_sessions": 1,
+                "present_count": 1,
+                "absent_count": 1,
+                "roster_count": 2,
+            }
+        ]
+        assert payload["harvest_by_date"] == [
+            {
+                "date": DATE_B,
+                "unit": "fruit_count",
+                "record_count": 1,
+                "quantity": "5.000",
+            }
+        ]
+        assert len(payload["harvest_by_farm_unit"]) == 1
+        assert payload["harvest_by_farm_unit"][0]["farm_unit_code"] == "BLOCK-1"
+        await client.aclose()
+
+    asyncio.run(flow())
+
+
+def test_attendance_report_by_date_series() -> None:
+    data = setup()
+    w = data["workers"]
+
+    async def flow() -> None:
+        client = await client_for("manager")
+        await submit_attendance(client, DATE_A, [w[0], w[1]], ["present", "absent"])
+        await submit_attendance(client, DATE_B, [w[0], w[2]], ["present", "present"])
+        result = await client.get(
+            "/api/v1/reports/attendance", params={"date_from": DATE_A, "date_to": DATE_B}
+        )
+        payload = result.json()
+        by_date = {row["date"]: row for row in payload["by_date"]}
+        assert set(by_date) == {DATE_A, DATE_B}
+        assert by_date[DATE_A]["submitted_sessions"] == 1
+        assert by_date[DATE_A]["present_count"] == 1
+        assert by_date[DATE_A]["absent_count"] == 1
+        assert by_date[DATE_A]["roster_count"] == 2
+        assert by_date[DATE_B]["submitted_sessions"] == 1
+        assert by_date[DATE_B]["present_count"] == 2
+        assert by_date[DATE_B]["absent_count"] == 0
+        assert by_date[DATE_B]["roster_count"] == 2
+        await client.aclose()
+
+    asyncio.run(flow())
+
+
+def test_harvest_report_by_date_series_keeps_units_separate() -> None:
+    data = setup()
+    block = data["block"]
+
+    async def flow() -> None:
+        client = await client_for("manager")
+        # Same day, both units: must yield two independent series rows.
+        await submit_harvest(client, DATE_A, block.id, "12", "fruit_count", "Block One")
+        await submit_harvest(client, DATE_A, block.id, "840.500", "kilograms", "Block One")
+        await submit_harvest(client, DATE_B, block.id, "7", "fruit_count", "Block One")
+        result = await client.get(
+            "/api/v1/reports/harvest", params={"date_from": DATE_A, "date_to": DATE_B}
+        )
+        payload = result.json()
+        assert len(payload["by_date"]) == 3
+        by_day_unit = {(row["date"], row["unit"]): row for row in payload["by_date"]}
+        assert by_day_unit[(DATE_A, "fruit_count")]["quantity"] == "12.000"
+        assert by_day_unit[(DATE_A, "fruit_count")]["record_count"] == 1
+        assert by_day_unit[(DATE_A, "kilograms")]["quantity"] == "840.500"
+        assert by_day_unit[(DATE_B, "fruit_count")]["quantity"] == "7.000"
+        # A cross-unit sum for DATE_A (852.5) must never appear anywhere.
+        assert "852.500" not in str(payload["by_date"])
+        filtered = await client.get(
+            "/api/v1/reports/harvest",
+            params={"date_from": DATE_A, "date_to": DATE_B, "unit": "fruit_count"},
+        )
+        assert len(filtered.json()["by_date"]) == 2
+        await client.aclose()
+
+    asyncio.run(flow())
+
+
+def test_overview_series_window_and_days_bound() -> None:
+    data = setup()
+    w = data["workers"]
+
+    async def flow() -> None:
+        client = await client_for("manager")
+        await submit_attendance(client, DATE_A, [w[0]], ["present"])
+        # A window that excludes DATE_A must not include it in the series.
+        single = await client.get("/api/v1/reports/overview", params={"date": DATE_B, "days": 1})
+        assert single.status_code == 200
+        assert single.json()["attendance_by_date"] == []
+        window = await client.get("/api/v1/reports/overview", params={"date": DATE_B, "days": 5})
+        assert [row["date"] for row in window.json()["attendance_by_date"]] == [DATE_A]
+        out_of_bounds = await client.get(
+            "/api/v1/reports/overview", params={"date": DATE_B, "days": 0}
+        )
+        assert out_of_bounds.status_code == 422
         await client.aclose()
 
     asyncio.run(flow())

@@ -10,6 +10,21 @@ export type HarvestUnitTotal = {
   quantity: string;
 };
 
+export type AttendanceDateTotal = {
+  date: string;
+  submitted_sessions: number;
+  present_count: number;
+  absent_count: number;
+  roster_count: number;
+};
+
+export type HarvestDateUnitTotal = {
+  date: string;
+  unit: HarvestUnit;
+  record_count: number;
+  quantity: string;
+};
+
 export type OverviewAttendance = {
   submitted_sessions: number;
   present_count: number;
@@ -48,6 +63,9 @@ export type OverviewResponse = {
   date: string;
   attendance: OverviewAttendance;
   harvest: OverviewHarvest;
+  attendance_by_date: AttendanceDateTotal[];
+  harvest_by_date: HarvestDateUnitTotal[];
+  harvest_by_farm_unit: HarvestFarmUnitTotal[];
   recent_attendance: RecentAttendanceSession[];
   recent_harvest: RecentHarvestRecord[];
 };
@@ -71,6 +89,7 @@ export type AttendanceReportResponse = {
   present_count: number;
   absent_count: number;
   roster_count: number;
+  by_date: AttendanceDateTotal[];
   sessions: AttendanceSessionReport[];
 };
 
@@ -102,13 +121,17 @@ export type HarvestReportResponse = {
   date_to: string;
   submitted_record_count: number;
   by_unit: HarvestUnitTotal[];
+  by_date: HarvestDateUnitTotal[];
   by_farm_unit: HarvestFarmUnitTotal[];
   records: HarvestSourceRecord[];
 };
 
-export function getOverview(params: { date?: string; recent?: number } = {}) {
+export function getOverview(
+  params: { date?: string; days?: number; recent?: number } = {},
+) {
   const query = new URLSearchParams();
   if (params.date) query.set("date", params.date);
+  if (params.days) query.set("days", String(params.days));
   if (params.recent) query.set("recent", String(params.recent));
   return apiRequest<OverviewResponse>(`/api/v1/reports/overview?${query}`);
 }
