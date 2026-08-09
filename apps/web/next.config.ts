@@ -6,6 +6,15 @@ if (!process.env.NEXT_PUBLIC_API_ORIGIN) {
 
 const nextConfig: NextConfig = {
   agentRules: false,
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "encrypted-tbn0.gstatic.com",
+        pathname: "/images",
+      },
+    ],
+  },
   reactStrictMode: true,
   poweredByHeader: false,
 };

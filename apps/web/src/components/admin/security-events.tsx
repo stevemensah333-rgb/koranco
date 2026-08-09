@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Alert } from "@/components/ui/alert";
+import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingIndicator } from "@/components/ui/loading-indicator";
 import { PageHeader } from "@/components/ui/page-header";
 import {
@@ -45,9 +46,17 @@ export function SecurityEventsAdmin() {
         {!events && !failed ? (
           <LoadingIndicator label="Loading security events…" />
         ) : events?.length === 0 ? (
-          <p>No security events are recorded.</p>
+          <EmptyState
+            description="No security events are recorded."
+            heading="No security events"
+          />
         ) : events ? (
-          <div className="table-scroll" tabIndex={0}>
+          <div
+            aria-label="Security event history"
+            className="table-scroll"
+            role="region"
+            tabIndex={0}
+          >
             <table className="data-table">
               <caption className="sr-only">Security event history</caption>
               <thead>

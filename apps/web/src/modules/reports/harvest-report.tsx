@@ -336,7 +336,12 @@ export function HarvestReport() {
                   <p>No submitted Harvest records match this filter.</p>
                 )}
                 {data.by_farm_unit.length === 0 ? null : (
-                  <div className="table-scroll" tabIndex={0}>
+                  <div
+                    aria-label="Harvest totals by FarmUnit"
+                    className="table-scroll"
+                    role="region"
+                    tabIndex={0}
+                  >
                     <table className="data-table">
                       <caption className="sr-only">
                         Harvest totals by FarmUnit
@@ -382,7 +387,12 @@ export function HarvestReport() {
                 {data.records.length === 0 ? (
                   <p>No submitted Harvest records match this filter.</p>
                 ) : (
-                  <div className="table-scroll" tabIndex={0}>
+                  <div
+                    aria-label="Submitted harvest source records"
+                    className="table-scroll"
+                    role="region"
+                    tabIndex={0}
+                  >
                     <table className="data-table">
                       <caption className="sr-only">
                         Submitted harvest source records

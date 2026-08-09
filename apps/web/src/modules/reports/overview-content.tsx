@@ -342,7 +342,12 @@ export function OverviewContent({
               {data.recent_attendance.length === 0 ? (
                 <p>No submitted Attendance sessions are recorded yet.</p>
               ) : (
-                <div className="table-scroll" tabIndex={0}>
+                <div
+                  aria-label="Recent submitted attendance sessions"
+                  className="table-scroll"
+                  role="region"
+                  tabIndex={0}
+                >
                   <table className="data-table">
                     <caption className="sr-only">
                       Recent submitted attendance sessions
@@ -383,7 +388,12 @@ export function OverviewContent({
               {data.recent_harvest.length === 0 ? (
                 <p>No submitted Harvest records are recorded yet.</p>
               ) : (
-                <div className="table-scroll" tabIndex={0}>
+                <div
+                  aria-label="Recent submitted harvest records"
+                  className="table-scroll"
+                  role="region"
+                  tabIndex={0}
+                >
                   <table className="data-table">
                     <caption className="sr-only">
                       Recent submitted harvest records

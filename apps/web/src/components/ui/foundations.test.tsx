@@ -22,6 +22,14 @@ describe("foundational controls", () => {
     expect(onClick).not.toHaveBeenCalled();
   });
 
+  it("keeps quiet actions visually distinct from primary actions", () => {
+    render(<Button variant="quiet">View history</Button>);
+
+    expect(screen.getByRole("button", { name: "View history" })).toHaveClass(
+      "button-quiet",
+    );
+  });
+
   it("associates a visible label, guidance, and error with an invalid field", () => {
     const describedBy = fieldDescriptionIds("reference", {
       description: true,
@@ -114,6 +122,16 @@ describe("state patterns", () => {
     );
 
     expect(screen.getByRole("alert")).toHaveTextContent("Service unavailable");
+  });
+
+  it("exposes non-error feedback as a status update", () => {
+    render(
+      <Alert title="Saved" tone="success">
+        The draft remains available on this device.
+      </Alert>,
+    );
+
+    expect(screen.getByRole("status")).toHaveTextContent("Saved");
   });
 
   it("gives an empty state an accessible heading", () => {

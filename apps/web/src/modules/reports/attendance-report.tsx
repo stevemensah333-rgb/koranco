@@ -232,7 +232,12 @@ export function AttendanceReport() {
                 {data.sessions.length === 0 ? (
                   <p>No submitted Attendance sessions match this date range.</p>
                 ) : (
-                  <div className="table-scroll" tabIndex={0}>
+                  <div
+                    aria-label="Submitted attendance sessions"
+                    className="table-scroll"
+                    role="region"
+                    tabIndex={0}
+                  >
                     <table className="data-table">
                       <caption className="sr-only">
                         Submitted attendance sessions in the selected range

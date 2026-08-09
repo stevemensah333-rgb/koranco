@@ -748,7 +748,7 @@ export function AttendanceWorkspace({ sessionId }: { sessionId: string }) {
                   <div className="attendance-times">
                     <label>
                       In
-                      <input
+                      <TextInput
                         type="time"
                         value={item.time_in}
                         onChange={(e) =>
@@ -758,7 +758,7 @@ export function AttendanceWorkspace({ sessionId }: { sessionId: string }) {
                     </label>
                     <label>
                       Out
-                      <input
+                      <TextInput
                         type="time"
                         value={item.time_out}
                         onChange={(e) =>

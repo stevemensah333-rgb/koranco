@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { LoadingIndicator } from "@/components/ui/loading-indicator";
 import { PageHeader } from "@/components/ui/page-header";
 import { TextInput } from "@/components/ui/inputs";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { getCurrentSession, type AuthenticatedUser } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/client";
 import {
@@ -172,27 +173,55 @@ export function AttendanceList() {
       <section className="content-section">
         <h2 className="section-heading">On this device</h2>
         {localItems.length ? (
-          localItems.map((item) => (
-            <p key={item.id}>
-              <a href={`/attendance/${item.id}`}>{item.attendanceDate}</a>
-              {" · "}
-              {item.state === "synced"
-                ? "Server confirmed"
-                : item.state === "needs_attention"
-                  ? "Needs attention"
-                  : item.state === "pending_submission" ||
-                      item.state === "syncing"
-                    ? "Waiting to sync"
-                    : "Saved on this device"}
-            </p>
-          ))
+          <div className="device-record-list">
+            {localItems.map((item) => {
+              const waiting =
+                item.state === "pending_submission" || item.state === "syncing";
+              const label =
+                item.state === "synced"
+                  ? "Server confirmed"
+                  : item.state === "needs_attention"
+                    ? "Needs attention"
+                    : waiting
+                      ? "Waiting to sync"
+                      : "Saved on this device";
+              return (
+                <div className="device-record" key={item.id}>
+                  <a
+                    className="device-record-link"
+                    href={`/attendance/${item.id}`}
+                  >
+                    {item.attendanceDate}
+                  </a>
+                  <StatusBadge
+                    pending={waiting}
+                    tone={
+                      item.state === "synced"
+                        ? "success"
+                        : item.state === "needs_attention"
+                          ? "error"
+                          : "info"
+                    }
+                  >
+                    {label}
+                  </StatusBadge>
+                </div>
+              );
+            })}
+          </div>
         ) : (
-          <p>No attendance is saved on this device for this user.</p>
+          <p className="muted-text">
+            No attendance is saved on this device for this user.
+          </p>
         )}
       </section>
       <section className="content-section">
         <h2 className="section-heading">Sessions</h2>
-        <div className="register-filters">
+        <div
+          aria-label="Filter attendance sessions"
+          className="register-filters"
+          role="group"
+        >
           <label>
             Status
             <select
@@ -227,7 +256,12 @@ export function AttendanceList() {
         ) : items?.length === 0 ? (
           <p>No attendance sessions match the current filters.</p>
         ) : items ? (
-          <div className="table-scroll" tabIndex={0}>
+          <div
+            aria-label="Attendance sessions"
+            className="table-scroll"
+            role="region"
+            tabIndex={0}
+          >
             <table className="data-table">
               <caption className="sr-only">Attendance sessions</caption>
               <thead>
@@ -235,7 +269,7 @@ export function AttendanceList() {
                   <th>Date</th>
                   <th>Status</th>
                   <th>Recorded by</th>
-                  <th>Roster</th>
+                  <th className="cell-numeric">Roster</th>
                   <th>Action</th>
                 </tr>
               </thead>
@@ -243,9 +277,18 @@ export function AttendanceList() {
                 {items.map((item) => (
                   <tr key={item.id}>
                     <td>{item.attendance_date}</td>
-                    <td>{item.status}</td>
+                    <td>
+                      <StatusBadge
+                        pending={item.status === "draft"}
+                        tone={
+                          item.status === "submitted" ? "success" : "warning"
+                        }
+                      >
+                        {item.status === "submitted" ? "Submitted" : "Draft"}
+                      </StatusBadge>
+                    </td>
                     <td>{item.submitted_by_name ?? item.created_by_name}</td>
-                    <td>{item.entry_count}</td>
+                    <td className="cell-numeric">{item.entry_count}</td>
                     <td>
                       <a href={`/attendance/${item.id}`}>
                         {item.status === "draft" ? "Resume" : "View"}
