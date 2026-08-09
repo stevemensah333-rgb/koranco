@@ -29,7 +29,7 @@ Management layouts use a full-width top bar and a persistent left navigation anc
 
 Field layouts use a compact identity/context header, one main task area, a visible future status location, and a stable bottom action region. Controls meet the 48px touch-target standard. The field shell does not imply any synchronization behavior.
 
-The sign-in page reuses the management top bar and application identity, so the unauthenticated and authenticated states read as the same product. It centers a single restrained panel (white surface, subtle raised shadow) with a compact header and form on the canvas background, with no marketing copy or decorative elements.
+The sign-in page uses the approved Koranco farm photograph as a full-viewport background and centers a single restrained authentication panel over a neutral legibility overlay. The panel presents the Koranco logo, company name, product name, and compact form in that order, with no marketing copy or decorative elements. It preserves the photograph's aspect ratio with `cover` positioning while allowing a tighter, crop-aware mobile composition.
 
 ## Component principles
 

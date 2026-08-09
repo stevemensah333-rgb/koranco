@@ -49,15 +49,17 @@ function submitLogin(
 }
 
 describe("LoginPage", () => {
-  it("renders the product banner, sign-in landmarks, and identity", () => {
+  it("renders the Koranco identity, imagery, and sign-in form", () => {
     render(<LoginPage />);
 
-    expect(screen.getByRole("banner")).toBeInTheDocument();
     expect(screen.getByRole("main")).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { name: "Sign in" }),
+      screen.getByRole("heading", { level: 1, name: "Koranco Farms" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("Koranco Farms")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Sign in" }),
+    ).toBeInTheDocument();
+    expect(screen.getByAltText("Koranco Farms logo")).toBeInTheDocument();
     expect(screen.getByLabelText(/Login identifier/)).toBeInTheDocument();
     expect(screen.getByLabelText(/Password/)).toBeInTheDocument();
   });
