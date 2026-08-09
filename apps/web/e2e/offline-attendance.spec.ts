@@ -115,7 +115,14 @@ test("a lost sync response retries without a second official submission", async 
   await page
     .getByRole("button", { name: "Prepare roster for offline use" })
     .click();
-  await page.getByLabel("Attendance date").fill("2026-08-09");
+  // Use a date guaranteed different from the earlier tests' "today" default:
+  // every test submits the same worker population, and the server rejects a
+  // second submitted session with the same date + population (ADR-007
+  // fingerprint), which would send this sync to needs_attention.
+  const distinctDate = new Date(Date.now() + 86_400_000)
+    .toISOString()
+    .slice(0, 10);
+  await page.getByLabel("Attendance date").fill(distinctDate);
   await page.getByRole("button", { name: "Start draft" }).click();
   await page.getByRole("button", { name: "Add all active workers" }).click();
   await page.getByRole("button", { name: "Mark all present" }).click();
