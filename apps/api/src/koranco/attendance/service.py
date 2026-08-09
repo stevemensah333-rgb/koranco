@@ -138,6 +138,10 @@ def update_draft(
         for worker_id in worker_ids
     ):
         raise HTTPException(status_code=409, detail="An inactive Worker cannot be newly added")
+    # Draft saves replace the whole roster: delete all entries and re-insert.
+    # This intentionally churns entry UUIDs/versions across saves; only the
+    # submitted state is stable (fingerprint + audit). Per-entry upserts would
+    # add diffing complexity without protecting submitted data.
     db.execute(
         delete(AttendanceEntry).where(AttendanceEntry.attendance_session_id == attendance.id)
     )

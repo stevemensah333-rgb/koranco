@@ -17,7 +17,6 @@ vi.mock("@/lib/api/auth", () => ({
 }));
 vi.mock("@/modules/reports/api", () => ({
   getOverview: (...a: unknown[]) => getOverview(...a),
-  buildExportUrl: vi.fn(),
   downloadCsv: vi.fn(),
 }));
 

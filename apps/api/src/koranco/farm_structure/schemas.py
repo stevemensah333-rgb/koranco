@@ -46,6 +46,12 @@ class FarmUnitUpdateRequest(FarmUnitCreateRequest):
     pass
 
 
+class LifecycleRequest(BaseModel):
+    """Optional reason accompanying a FarmUnit status change."""
+
+    reason: str | None = Field(default=None, max_length=500)
+
+
 class FarmUnitListResponse(BaseModel):
     items: list[FarmUnitResponse]
     total: int

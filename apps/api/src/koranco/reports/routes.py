@@ -4,10 +4,10 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 
+from koranco.db.session import DatabaseSession
 from koranco.harvest.schemas import HarvestUnit
 from koranco.identity.dependencies import (
     AuthContext,
-    DatabaseSession,
     require_csrf,
     require_permission,
 )

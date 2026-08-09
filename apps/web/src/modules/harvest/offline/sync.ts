@@ -1,3 +1,14 @@
+/**
+ * Harvest sync engine: drives the local outbox to the harvest sync endpoint
+ * and maps outcomes (applied / already_applied / conflict / rejected, HTTP
+ * 401/403/other) onto the local draft/outbox states.
+ *
+ * Deliberate per-domain copy of the Attendance engine in
+ * `modules/attendance/offline/sync.ts` (ADR-008/ADR-009); keep the
+ * failure→state mapping in lockstep. Do not generalize into a shared engine
+ * without a new ADR. The shared Dexie database lives in the attendance module
+ * for historical reasons (see modules/attendance/offline/db.ts).
+ */
 import { csrfHeaders } from "@/lib/api/auth";
 import { ApiError, apiRequest } from "@/lib/api/client";
 import type { HarvestRecord } from "@/modules/harvest/api";

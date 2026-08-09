@@ -16,12 +16,9 @@ from koranco.identity.models import (
     SecurityEvent,
     UserPermission,
 )
-from koranco.identity.passwords import hash_password
-from koranco.identity.permissions import Role, permissions_for_role
+from koranco.identity.permissions import Role
 from koranco.main import app
-
-ORIGIN = "http://test"
-PASSWORD = "a long example password"
+from tests.helpers import ORIGIN, PASSWORD, add_user
 
 
 @pytest.fixture(autouse=True)
@@ -32,22 +29,6 @@ def clean() -> None:
         db.execute(delete(ApplicationSession))
         db.execute(delete(UserPermission))
         db.execute(delete(ApplicationUser))
-
-
-def add_user(login: str, role: Role, *, status: str = "active") -> ApplicationUser:
-    with SessionFactory.begin() as db:
-        user = ApplicationUser(
-            login_identifier=login,
-            display_name=login.title(),
-            password_hash=hash_password(PASSWORD),
-            status=status,
-            role=role,
-        )
-        user.permissions.extend(UserPermission(permission=p) for p in permissions_for_role(role))
-        db.add(user)
-        db.flush()
-        db.expunge(user)
-        return user
 
 
 async def authenticated_client(login: str) -> AsyncClient:

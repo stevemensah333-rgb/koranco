@@ -1,5 +1,15 @@
 "use client";
 
+/**
+ * Attendance workspace: online draft/edit/submit/correct plus offline capture
+ * and sync for one session. This component is intentionally large because it
+ * owns one cohesive workflow with many small states; the offline behaviors
+ * live in `offline/db.ts` and `offline/sync.ts`, and online API calls in
+ * `../api.ts`. Add a field here by following the existing `RosterItem` ->
+ * form state -> `DraftEntry` -> API -> server-schema chain; the same field
+ * must also be mapped in `offline/db.ts` (cacheServerDraft / queueSubmission)
+ * if it participates in offline capture.
+ */
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { FieldShell } from "@/components/shells/field-shell";

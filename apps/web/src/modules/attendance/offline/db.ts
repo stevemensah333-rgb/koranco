@@ -1,3 +1,13 @@
+/**
+ * Local offline stores for both approved field domains (ADR-008, ADR-009).
+ *
+ * The module (and the IndexedDB database name `koranco-attendance-offline`)
+ * live under `modules/attendance/offline` for historical reasons: Harvest
+ * reuses the same database via an additive schema upgrade. Do NOT rename the
+ * database (a rename is a destructive copy migration) and do NOT treat this
+ * module as the shared "sync framework" — the two domains share only storage
+ * and transport primitives here, never their business rules.
+ */
 import Dexie, { type EntityTable } from "dexie";
 import type { AuthenticatedUser } from "@/lib/api/auth";
 import type { Worker } from "@/modules/workers/api";
@@ -8,7 +18,6 @@ import type { HarvestRecord, HarvestUnit } from "@/modules/harvest/api";
 export const OFFLINE_LEASE_MS = 12 * 60 * 60 * 1000;
 export const LOCAL_SCHEMA_VERSION = 2;
 export const SYNC_PAYLOAD_VERSION = 1;
-export const APP_VERSION = "0.2.0";
 export const HARVEST_PAYLOAD_VERSION = 1;
 
 export type CachedWorker = {

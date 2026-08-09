@@ -61,6 +61,10 @@ def authenticate(
     password: str,
     request_id: str | None,
 ) -> NewSession:
+    # An invalid identifier format falls back to a lenient normalization so the
+    # rate-limit bucket and dummy-password path below behave identically to a
+    # valid-but-unknown identifier: missing and existing accounts must be
+    # indistinguishable (timing and response).
     try:
         normalized = normalize_login_identifier(login_identifier)
     except ValueError:
@@ -87,6 +91,8 @@ def authenticate(
     )
     valid_password = verify_password(user.password_hash, password) if user else False
     if user is None:
+        # Burn equivalent Argon2 work so response timing does not reveal
+        # whether the login identifier exists.
         verify_dummy_password(password)
 
     if user is None or not valid_password or user.status != "active":

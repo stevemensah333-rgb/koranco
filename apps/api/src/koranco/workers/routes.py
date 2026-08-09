@@ -2,13 +2,12 @@ import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from pydantic import BaseModel, Field
 from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 
+from koranco.db.session import DatabaseSession
 from koranco.identity.dependencies import (
     AuthContext,
-    DatabaseSession,
     require_csrf,
     require_permission,
 )
@@ -18,12 +17,18 @@ from koranco.operational_audit.models import OperationalAuditEvent
 from koranco.operational_audit.schemas import AuditEventListResponse, audit_response
 from koranco.workers.models import Worker
 from koranco.workers.schemas import (
+    LifecycleRequest,
     WorkerCreateRequest,
     WorkerListResponse,
     WorkerResponse,
     WorkerUpdateRequest,
 )
-from koranco.workers.service import create_worker, load_worker, set_worker_status, update_worker
+from koranco.workers.service import (
+    change_worker_status,
+    create_worker,
+    load_worker,
+    update_worker,
+)
 
 router = APIRouter(prefix="/api/v1/workers", tags=["workers"])
 
@@ -116,23 +121,6 @@ def edit_worker(
     return response(worker)
 
 
-class LifecycleRequest(BaseModel):
-    reason: str | None = Field(default=None, max_length=500)
-
-
-def change_status(
-    worker_id: uuid.UUID,
-    status: str,
-    payload: LifecycleRequest,
-    request: Request,
-    db: DatabaseSession,
-    auth: AuthContext,
-) -> WorkerResponse:
-    worker = load_worker(db, worker_id, for_update=True)
-    set_worker_status(db, auth.user, worker, status, request.state.request_id, payload.reason)
-    return response(worker)
-
-
 @router.post("/{worker_id}/deactivate", response_model=WorkerResponse)
 def deactivate(
     worker_id: uuid.UUID,
@@ -142,7 +130,15 @@ def deactivate(
     auth: Annotated[AuthContext, Depends(require_csrf)],
     _permission: Annotated[AuthContext, Depends(require_permission(Permission.WORKERS_DEACTIVATE))],
 ) -> WorkerResponse:
-    return change_status(worker_id, "inactive", payload, request, db, auth)
+    worker = change_worker_status(
+        db,
+        auth.user,
+        worker_id,
+        "inactive",
+        request.state.request_id,
+        payload.reason,
+    )
+    return response(worker)
 
 
 @router.post("/{worker_id}/reactivate", response_model=WorkerResponse)
@@ -154,7 +150,15 @@ def reactivate(
     auth: Annotated[AuthContext, Depends(require_csrf)],
     _permission: Annotated[AuthContext, Depends(require_permission(Permission.WORKERS_DEACTIVATE))],
 ) -> WorkerResponse:
-    return change_status(worker_id, "active", payload, request, db, auth)
+    worker = change_worker_status(
+        db,
+        auth.user,
+        worker_id,
+        "active",
+        request.state.request_id,
+        payload.reason,
+    )
+    return response(worker)
 
 
 @router.get("/{worker_id}/audit", response_model=AuditEventListResponse)

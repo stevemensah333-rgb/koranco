@@ -11,7 +11,6 @@ import { PageHeader } from "@/components/ui/page-header";
 import { TextInput } from "@/components/ui/inputs";
 import { getCurrentSession, type AuthenticatedUser } from "@/lib/api/auth";
 import {
-  buildExportUrl,
   downloadCsv,
   getAttendanceReport,
   type AttendanceReportResponse,
@@ -73,7 +72,7 @@ export function AttendanceReport() {
     if (!user) return;
     setExporting(true);
     try {
-      await downloadCsv(buildExportUrl("attendance", { dateFrom, dateTo }));
+      await downloadCsv("attendance", { dateFrom, dateTo });
     } catch {
       setError(
         "The export could not be completed. Check permissions and try again.",

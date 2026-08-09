@@ -170,7 +170,12 @@ export function getHarvestReport(
   return apiRequest<HarvestReportResponse>(`/api/v1/reports/harvest?${query}`);
 }
 
-export function buildExportUrl(
+/**
+ * Manager-only CSV export (backend enforces `exports.create`).
+ * The export endpoints are POST (CSRF-protected, audited); the filter
+ * parameters travel in the query string.
+ */
+export async function downloadCsv(
   kind: "attendance" | "harvest",
   params: {
     dateFrom?: string;
@@ -178,7 +183,7 @@ export function buildExportUrl(
     farmUnitId?: string;
     unit?: string;
   },
-) {
+): Promise<void> {
   const query = new URLSearchParams();
   if (params.dateFrom) query.set("date_from", params.dateFrom);
   if (params.dateTo) query.set("date_to", params.dateTo);
@@ -186,10 +191,7 @@ export function buildExportUrl(
     if (params.farmUnitId) query.set("farm_unit_id", params.farmUnitId);
     if (params.unit) query.set("unit", params.unit);
   }
-  return `${publicConfig.apiOrigin}/api/v1/reports/exports/${kind}?${query}`;
-}
-
-export async function downloadCsv(path: string): Promise<void> {
+  const path = `${publicConfig.apiOrigin}/api/v1/reports/exports/${kind}?${query}`;
   const response = await fetch(path, {
     method: "POST",
     credentials: "include",
@@ -202,7 +204,7 @@ export async function downloadCsv(path: string): Promise<void> {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = path.split("/").pop() ?? "koranco-export.csv";
+  anchor.download = `${kind}-export.csv`;
   document.body.appendChild(anchor);
   anchor.click();
   anchor.remove();

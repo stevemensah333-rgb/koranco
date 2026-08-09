@@ -1,8 +1,6 @@
 import asyncio
-from typing import Any
 
 import pytest
-from httpx import ASGITransport, AsyncClient, Response
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import DBAPIError
 
@@ -14,13 +12,9 @@ from koranco.identity.models import (
     SecurityEvent,
     UserPermission,
 )
-from koranco.identity.passwords import hash_password
-from koranco.identity.permissions import Role, permissions_for_role
-from koranco.main import app
+from koranco.identity.permissions import Role
 from koranco.operational_audit.models import OperationalAuditEvent
-
-ORIGIN = "http://test"
-PASSWORD = "a long example password"
+from tests.helpers import add_user, client_for, write
 
 
 @pytest.fixture(autouse=True)
@@ -31,39 +25,6 @@ def clean_master_data() -> None:
         db.execute(delete(ApplicationSession))
         db.execute(delete(UserPermission))
         db.execute(delete(ApplicationUser))
-
-
-def add_user(login: str, role: Role) -> None:
-    with SessionFactory.begin() as db:
-        user = ApplicationUser(
-            login_identifier=login,
-            display_name=login.title(),
-            password_hash=hash_password(PASSWORD),
-            status="active",
-            role=role,
-        )
-        user.permissions.extend(UserPermission(permission=p) for p in permissions_for_role(role))
-        db.add(user)
-
-
-async def client_for(login: str) -> AsyncClient:
-    client = AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN)
-    result = await client.post(
-        "/api/v1/auth/login",
-        headers={"Origin": ORIGIN},
-        json={"login_identifier": login, "password": PASSWORD},
-    )
-    assert result.status_code == 200
-    return client
-
-
-async def write(client: AsyncClient, method: str, path: str, payload: dict[str, Any]) -> Response:
-    return await client.request(
-        method,
-        path,
-        headers={"Origin": ORIGIN, "X-CSRF-Token": client.cookies["koranco_csrf"]},
-        json=payload,
-    )
 
 
 def setup_roles() -> None:

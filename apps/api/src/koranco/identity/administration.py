@@ -11,6 +11,8 @@ from koranco.identity.permissions import Role, permissions_for_role
 from koranco.identity.security import normalize_login_identifier
 from koranco.identity.service import record_security_event
 
+# Arbitrary unique key serializing Manager demotion/disable transactions so
+# concurrent administrators cannot leave the system without an active Manager.
 MANAGER_INVARIANT_LOCK = 4_891_317
 RECENT_AUTHENTICATION_MINUTES = 15
 

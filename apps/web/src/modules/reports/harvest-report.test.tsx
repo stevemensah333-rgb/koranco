@@ -9,7 +9,6 @@ const listFarmUnits = vi.fn();
 vi.mock("@/lib/api/auth", () => ({ getCurrentSession: () => session() }));
 vi.mock("@/modules/reports/api", () => ({
   getHarvestReport: (...a: unknown[]) => getHarvestReport(...a),
-  buildExportUrl: () => "http://api/api/v1/reports/exports/harvest",
   downloadCsv: vi.fn(),
 }));
 vi.mock("@/modules/farm-structure/api", () => ({

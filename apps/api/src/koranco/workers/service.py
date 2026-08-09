@@ -100,3 +100,17 @@ def set_worker_status(
         after=worker_state(worker),
         reason=reason,
     )
+
+
+def change_worker_status(
+    session: Session,
+    actor: ApplicationUser,
+    worker_id: uuid.UUID,
+    status: str,
+    request_id: str | None,
+    reason: str | None,
+) -> Worker:
+    """Load, change, and return a Worker's status in one HTTP-request unit."""
+    worker = load_worker(session, worker_id, for_update=True)
+    set_worker_status(session, actor, worker, status, request_id, reason)
+    return worker

@@ -7,6 +7,29 @@
   PostgreSQL and React/Next.js/TypeScript, who has **no** access to the original
   team, AI prompts, or conversation history.
 
+> **Resolution status (2026-08-09).** The targeted simplification phase acted on
+> the findings below. The audit text is preserved as the original assessment;
+> resolved items are:
+>
+> - **Resolved** — E-1 (canonical `DatabaseSession` in `db/session.py`), E-3
+>   (`LifecycleRequest`/`change_status` moved to schemas/services), E-5
+>   (`validate_entry_times` extracted), E-6 (`require_farm_unit` split into two
+>   named functions), E-9 (`buildExportUrl` merged into `downloadCsv`), E-2/E-10
+>   (cross-reference + ownership comments added to the four sync modules and
+>   `offline/db.ts`), E-11 (draft-replace semantics documented in
+>   `docs/product/attendance.md`), F (login timing-equalization and mid-request
+>   commit comments), L-1 (`ApiStatus`/`getApiHealth` removed), L-2
+>   (`APP_VERSION` removed), L-4 (single `ManagementNavItem` type), M-2
+>   (`docs/development/common-change-recipes.md`), M-3 (workspace ownership
+>   comments), M-7 (backend test helpers consolidated into
+>   `tests/helpers.py`), and the advisory-lock key comments.
+> - **Deliberately unchanged** — the two sync engines (E-2), the dual-domain
+>   Dexie module (E-10), the repeated frontend session gate (E-8), the four
+>   audit endpoints (E-4), and the route/service duplicate submit guard (E-7);
+>   see section O. The processed-operation retention policy (M-9) remains an
+>   open Koranco item. CI gates for `alembic check` and the restore drill
+>   (M-1) still require the GitHub App `workflows` permission.
+
 > The original Koranco proposal document does **not** exist in the repository.
 > Product intent must be reconstructed from `README.md`, `docs/product/*`,
 > `docs/design/*`, and the ADRs. This is a documentation gap (K, 3).

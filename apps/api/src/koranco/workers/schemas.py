@@ -49,6 +49,12 @@ class WorkerUpdateRequest(BaseModel):
     _name = field_validator("full_name")(validate_name)
 
 
+class LifecycleRequest(BaseModel):
+    """Optional reason accompanying a Worker status change."""
+
+    reason: str | None = Field(default=None, max_length=500)
+
+
 class WorkerListResponse(BaseModel):
     items: list[WorkerResponse]
     total: int

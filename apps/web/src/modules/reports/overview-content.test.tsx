@@ -6,7 +6,6 @@ import { OverviewContent } from "./overview-content";
 const getOverview = vi.fn();
 vi.mock("@/modules/reports/api", () => ({
   getOverview: (...a: unknown[]) => getOverview(...a),
-  buildExportUrl: () => "http://api/api/v1/reports/exports/attendance",
   downloadCsv: vi.fn(),
 }));
 

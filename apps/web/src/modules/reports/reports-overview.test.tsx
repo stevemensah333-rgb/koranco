@@ -9,7 +9,6 @@ const downloadCsv = vi.fn();
 vi.mock("@/lib/api/auth", () => ({ getCurrentSession: () => session() }));
 vi.mock("@/modules/reports/api", () => ({
   getOverview: (...a: unknown[]) => getOverview(...a),
-  buildExportUrl: () => "http://api/api/v1/reports/exports/attendance",
   downloadCsv: (...a: unknown[]) => downloadCsv(...a),
 }));
 

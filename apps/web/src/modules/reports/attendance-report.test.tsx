@@ -8,7 +8,6 @@ const getAttendanceReport = vi.fn();
 vi.mock("@/lib/api/auth", () => ({ getCurrentSession: () => session() }));
 vi.mock("@/modules/reports/api", () => ({
   getAttendanceReport: (...a: unknown[]) => getAttendanceReport(...a),
-  buildExportUrl: () => "http://api/api/v1/reports/exports/attendance",
   downloadCsv: vi.fn(),
 }));
 

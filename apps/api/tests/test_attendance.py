@@ -3,7 +3,7 @@ import uuid
 from typing import Any
 
 import pytest
-from httpx import ASGITransport, AsyncClient, Response
+from httpx import AsyncClient, Response
 from sqlalchemy import delete, select
 
 from koranco.attendance.models import AttendanceSyncOperation
@@ -15,14 +15,16 @@ from koranco.identity.models import (
     SecurityEvent,
     UserPermission,
 )
-from koranco.identity.passwords import hash_password
-from koranco.identity.permissions import Role, permissions_for_role
-from koranco.main import app
+from koranco.identity.permissions import Role
 from koranco.operational_audit.models import OperationalAuditEvent
 from koranco.workers.models import Worker
+from tests.helpers import (
+    add_user,
+    add_worker,
+    client_for,
+    write,
+)
 
-ORIGIN = "http://test"
-PASSWORD = "a long example password"
 TODAY = "2026-08-07"
 
 
@@ -34,59 +36,6 @@ def clean_identity() -> None:
         db.execute(delete(ApplicationSession))
         db.execute(delete(UserPermission))
         db.execute(delete(ApplicationUser))
-
-
-def add_user(login: str, role: Role) -> ApplicationUser:
-    with SessionFactory.begin() as db:
-        user = ApplicationUser(
-            login_identifier=login,
-            display_name=login.title(),
-            password_hash=hash_password(PASSWORD),
-            status="active",
-            role=role,
-        )
-        user.permissions.extend(UserPermission(permission=p) for p in permissions_for_role(role))
-        db.add(user)
-        db.flush()
-        db.expunge(user)
-        return user
-
-
-def add_worker(code: str, actor_id: Any, *, active: bool = True) -> Worker:
-    with SessionFactory.begin() as db:
-        worker = Worker(
-            worker_code=code,
-            full_name=f"Worker {code}",
-            status="active" if active else "inactive",
-            created_by=actor_id,
-            updated_by=actor_id,
-        )
-        db.add(worker)
-        db.flush()
-        db.expunge(worker)
-        return worker
-
-
-async def client_for(login: str) -> AsyncClient:
-    client = AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN)
-    response = await client.post(
-        "/api/v1/auth/login",
-        headers={"Origin": ORIGIN},
-        json={"login_identifier": login, "password": PASSWORD},
-    )
-    assert response.status_code == 200
-    return client
-
-
-async def write(
-    client: AsyncClient, method: str, path: str, payload: dict[str, Any] | None = None
-) -> Response:
-    return await client.request(
-        method,
-        path,
-        headers={"Origin": ORIGIN, "X-CSRF-Token": client.cookies["koranco_csrf"]},
-        json=payload,
-    )
 
 
 async def create_draft(client: AsyncClient) -> Response:

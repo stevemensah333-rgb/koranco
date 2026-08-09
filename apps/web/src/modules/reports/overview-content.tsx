@@ -7,7 +7,6 @@ import { Alert } from "@/components/ui/alert";
 import { LoadingIndicator } from "@/components/ui/loading-indicator";
 import { TextInput } from "@/components/ui/inputs";
 import {
-  buildExportUrl,
   downloadCsv,
   getOverview,
   type HarvestUnit,
@@ -90,7 +89,7 @@ export function OverviewContent({
   async function handleExport(kind: "attendance" | "harvest") {
     setExporting(kind);
     try {
-      await downloadCsv(buildExportUrl(kind, { dateFrom: date || undefined }));
+      await downloadCsv(kind, { dateFrom: date || undefined });
     } catch {
       setError(
         "The export could not be completed. Check permissions and try again.",

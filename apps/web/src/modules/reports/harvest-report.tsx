@@ -12,7 +12,6 @@ import { TextInput } from "@/components/ui/inputs";
 import { getCurrentSession, type AuthenticatedUser } from "@/lib/api/auth";
 import { listFarmUnits, type FarmUnit } from "@/modules/farm-structure/api";
 import {
-  buildExportUrl,
   downloadCsv,
   getHarvestReport,
   type HarvestReportResponse,
@@ -118,14 +117,12 @@ export function HarvestReport() {
     if (!user) return;
     setExporting(true);
     try {
-      await downloadCsv(
-        buildExportUrl("harvest", {
-          dateFrom,
-          dateTo,
-          farmUnitId,
-          unit,
-        }),
-      );
+      await downloadCsv("harvest", {
+        dateFrom,
+        dateTo,
+        farmUnitId,
+        unit,
+      });
     } catch {
       setError(
         "The export could not be completed. Check permissions and try again.",

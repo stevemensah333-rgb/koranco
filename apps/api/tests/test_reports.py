@@ -4,11 +4,10 @@ import io
 from typing import Any, cast
 
 import pytest
-from httpx import ASGITransport, AsyncClient, Response
+from httpx import AsyncClient, Response
 from sqlalchemy import delete, select
 
 from koranco.db.session import SessionFactory
-from koranco.farm_structure.models import FarmUnit
 from koranco.identity.models import (
     ApplicationSession,
     ApplicationUser,
@@ -16,13 +15,17 @@ from koranco.identity.models import (
     SecurityEvent,
     UserPermission,
 )
-from koranco.identity.passwords import hash_password
-from koranco.identity.permissions import Role, permissions_for_role
-from koranco.main import app
+from koranco.identity.permissions import Role
 from koranco.workers.models import Worker
+from tests.helpers import (
+    ORIGIN,
+    add_farm_unit,
+    add_user,
+    add_worker,
+    client_for,
+    write,
+)
 
-ORIGIN = "http://test"
-PASSWORD = "a long example password"
 DATE_A = "2026-08-05"
 DATE_B = "2026-08-07"
 
@@ -37,64 +40,14 @@ def clean_identity() -> None:
         db.execute(delete(ApplicationUser))
 
 
-def add_user(login: str, role: Role) -> ApplicationUser:
-    with SessionFactory.begin() as db:
-        user = ApplicationUser(
-            login_identifier=login,
-            display_name=login.title(),
-            password_hash=hash_password(PASSWORD),
-            status="active",
-            role=role,
-        )
-        user.permissions.extend(UserPermission(permission=p) for p in permissions_for_role(role))
-        db.add(user)
-        db.flush()
-        db.expunge(user)
-        return user
-
-
-def add_worker(code: str, full_name: str, actor_id: Any) -> Worker:
-    with SessionFactory.begin() as db:
-        worker = Worker(
-            worker_code=code,
-            full_name=full_name,
-            status="active",
-            created_by=actor_id,
-            updated_by=actor_id,
-        )
-        db.add(worker)
-        db.flush()
-        db.expunge(worker)
-        return worker
-
-
-def add_farm_unit(
-    code: str, name: str, unit_type: str, actor_id: Any, parent_id: Any = None
-) -> FarmUnit:
-    with SessionFactory.begin() as db:
-        unit = FarmUnit(
-            code=code,
-            name=name,
-            unit_type=unit_type,
-            parent_id=parent_id,
-            status="active",
-            created_by=actor_id,
-            updated_by=actor_id,
-        )
-        db.add(unit)
-        db.flush()
-        db.expunge(unit)
-        return unit
-
-
 def setup() -> dict[str, Any]:
     manager = add_user("manager", Role.MANAGER)
     add_user("supervisor", Role.SUPERVISOR)
     add_user("app.worker", Role.WORKER)
     workers = [
-        add_worker("KOR-1", "Ama Mensah", manager.id),
-        add_worker("KOR-2", "Kofi Boateng", manager.id),
-        add_worker("KOR-3", "Esi Owusu", manager.id),
+        add_worker("KOR-1", manager.id, full_name="Ama Mensah"),
+        add_worker("KOR-2", manager.id, full_name="Kofi Boateng"),
+        add_worker("KOR-3", manager.id, full_name="Esi Owusu"),
     ]
     field = add_farm_unit("FIELD-1", "Field One", "field", manager.id)
     block = add_farm_unit("BLOCK-1", "Block One", "block", manager.id, parent_id=field.id)
@@ -105,29 +58,6 @@ def setup() -> dict[str, Any]:
         "standalone": standalone,
         "workers": workers,
     }
-
-
-async def client_for(login: str) -> AsyncClient:
-    client = AsyncClient(transport=ASGITransport(app=app), base_url=ORIGIN)
-    assert (
-        await client.post(
-            "/api/v1/auth/login",
-            headers={"Origin": ORIGIN},
-            json={"login_identifier": login, "password": PASSWORD},
-        )
-    ).status_code == 200
-    return client
-
-
-async def write(
-    client: AsyncClient, method: str, path: str, payload: dict[str, Any] | None = None
-) -> Response:
-    return await client.request(
-        method,
-        path,
-        headers={"Origin": ORIGIN, "X-CSRF-Token": client.cookies["koranco_csrf"]},
-        json=payload,
-    )
 
 
 async def submit_attendance(
@@ -554,7 +484,7 @@ def test_csv_export_correctness_and_escaping() -> None:
     data = setup()
     w = data["workers"]
     block = data["block"]
-    add_worker("KOR-4", 'Na, "Doe"\nLine', data["manager"].id)
+    add_worker("KOR-4", data["manager"].id, full_name='Na, "Doe"\nLine')
 
     async def flow() -> None:
         client = await client_for("manager")
@@ -603,10 +533,10 @@ def test_csv_export_correctness_and_escaping() -> None:
 def test_csv_formula_injection_protection() -> None:
     data = setup()
     w = data["workers"]
-    eq = add_worker("KOR-5", "=2+2", data["manager"].id)
-    at = add_worker("KOR-6", "@SUM(A1)", data["manager"].id)
-    plus = add_worker("KOR-7", "+cmd", data["manager"].id)
-    minus = add_worker("KOR-8", "-x", data["manager"].id)
+    eq = add_worker("KOR-5", data["manager"].id, full_name="=2+2")
+    at = add_worker("KOR-6", data["manager"].id, full_name="@SUM(A1)")
+    plus = add_worker("KOR-7", data["manager"].id, full_name="+cmd")
+    minus = add_worker("KOR-8", data["manager"].id, full_name="-x")
 
     async def flow() -> None:
         client = await client_for("manager")
