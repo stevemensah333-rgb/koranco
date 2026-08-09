@@ -2,6 +2,14 @@
 
 Koranco must be able to own and operate the production system without dependence on the original developers, their personal accounts, or an AI coding tool.
 
+This document states the principles. The concrete artifacts are:
+
+- [Technical handover](technical-handover.md) — the single entry point for an incoming engineer;
+- [Engineer onboarding](engineer-onboarding.md) — Day-1/Day-2 checklist;
+- [Handover checklist](handover-checklist.md) — organizational transfer checklist;
+- [Support arrangement template](support-arrangement-template.md) — editable support contract;
+- [Troubleshooting](troubleshooting.md) — symptom-to-action operator guide.
+
 ## Ownership
 
 Production domains, DNS, hosting accounts, identity configuration, source repositories, databases, object storage, monitoring, secrets, backup destinations, and vendor contracts should be held in organization-controlled accounts. Access should use named users, least privilege, documented recovery, and an offboarding process rather than shared or personal credentials.
