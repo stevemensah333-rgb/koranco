@@ -29,9 +29,17 @@ backup/restore tooling, restore drill, and operational runbooks). See
 [reporting](reporting.md) and the [operations](../operations/backup-and-recovery.md)
 documentation.
 
+## In design (not yet implemented)
+
+- inventory and farm-input management — requirements and domain design are
+  documented in [inventory.md](inventory.md), the
+  [questionnaire](inventory-requirements-questionnaire.md), and
+  [ADR-013](../decisions/ADR-013-inventory-stock-movement-model.md) (Proposed).
+  No inventory product code exists; implementation begins only after the open
+  Koranco decisions listed there are confirmed.
+
 ## Deferred scope
 
-- inventory management
 - payroll automation
 - complete crop lifecycle management
 - full batch/export traceability

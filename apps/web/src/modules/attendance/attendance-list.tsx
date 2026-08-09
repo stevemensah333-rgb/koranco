@@ -127,7 +127,7 @@ export function AttendanceList() {
       </main>
     );
   return (
-    <ManagementShell navigation={nav}>
+    <ManagementShell navigation={nav} user={user}>
       <PageHeader
         title="Attendance"
         description="Start, resume, and inspect online supervisor-led roster attendance."

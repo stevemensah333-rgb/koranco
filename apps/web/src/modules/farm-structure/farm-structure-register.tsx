@@ -120,7 +120,7 @@ export function FarmStructureRegister() {
       </main>
     );
   return (
-    <ManagementShell navigation={domainNavigation("farm", user)}>
+    <ManagementShell navigation={domainNavigation("farm", user)} user={user}>
       <PageHeader
         title="Farm structure"
         description="A minimal register of field and block units. Parent relationships are optional until Koranco confirms the final hierarchy."

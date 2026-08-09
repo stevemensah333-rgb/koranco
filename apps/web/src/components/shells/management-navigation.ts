@@ -6,11 +6,19 @@ export type ManagementNavItem = {
   label: string;
 };
 
+export type ManagementNavSection = {
+  label: string;
+  items: ManagementNavItem[];
+};
+
 /**
  * Central management navigation. Every entry is gated by the permissions the
  * backend actually grants the authenticated user; frontend hiding is not
- * security, it only avoids presenting unusable links. Manager-only
- * administration stays at the end.
+ * security, it only avoids presenting unusable links.
+ *
+ * Operational workflows are grouped separately from administration so the
+ * persistent sidebar reads like a serious operations tool (mirroring the
+ * Account/operations separation, not Canvas branding).
  */
 export function managementNavigation(
   user: Pick<AuthenticatedUser, "permissions"> | null,

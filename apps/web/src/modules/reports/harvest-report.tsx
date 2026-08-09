@@ -144,6 +144,7 @@ export function HarvestReport() {
   return (
     <ManagementShell
       navigation={managementNavigation(user, "/reports/harvest")}
+      user={user}
     >
       <PageHeader
         title="Harvest report"

@@ -39,7 +39,10 @@ export function ReportsOverview() {
   const canExport = user?.permissions.includes("exports.create") ?? false;
 
   return (
-    <ManagementShell navigation={managementNavigation(user, "/reports")}>
+    <ManagementShell
+      navigation={managementNavigation(user, "/reports")}
+      user={user}
+    >
       <PageHeader
         title="Reports"
         description="Cross-domain operational understanding of confirmed Attendance and Harvest recorded in PostgreSQL."

@@ -4,7 +4,7 @@ Koranco is a production-oriented system for digitizing priority operations at Ko
 
 ## Project status
 
-The repository contains the runnable technical foundation, visual system, application-managed authentication, confirmed role/account administration, Worker register, Farm Structure register, production-oriented online/offline attendance capture, online and offline Harvest, append-only operational audit foundation, an operational reporting phase (Overview, Attendance report, Harvest report, and Manager-only CSV export), a management overview for reporting-capable users with dependency-free Attendance/Harvest visualization (ADR-012), and a Backup, Recovery, and Production Operations phase (provisional backup policy, portable `pg_dump`/`pg_restore` tooling, a restore drill, migration/incident/production-readiness runbooks, and a tested backup/restore drill). Deferred workflows (inventory, payroll, full traceability, AI/ML) remain unstarted.
+The repository contains the runnable technical foundation, visual system, application-managed authentication, confirmed role/account administration, Worker register, Farm Structure register, production-oriented online/offline attendance capture, online and offline Harvest, append-only operational audit foundation, an operational reporting phase (Overview, Attendance report, Harvest report, and Manager-only CSV export), a management overview for reporting-capable users with dependency-free Attendance/Harvest visualization (ADR-012), and a Backup, Recovery, and Production Operations phase (provisional backup policy, portable `pg_dump`/`pg_restore` tooling, a restore drill, migration/incident/production-readiness runbooks, and a tested backup/restore drill). Inventory and farm-input management is in design only ([product doc](docs/product/inventory.md), [questionnaire](docs/product/inventory-requirements-questionnaire.md), [ADR-013](docs/decisions/ADR-013-inventory-stock-movement-model.md)); no inventory code exists yet. Other deferred workflows (payroll, full traceability, AI/ML) remain unstarted.
 
 ## Architecture
 
@@ -110,6 +110,8 @@ The guarded setup creates/resets only `koranco_e2e`; never point the E2E seeder 
 - [Troubleshooting](docs/operations/troubleshooting.md)
 - [Offline synchronization guide](docs/operations/offline-synchronization-guide.md)
 - [Product scope](docs/product/product-scope.md)
+- [Inventory and farm inputs (design)](docs/product/inventory.md)
+- [Inventory requirements questionnaire](docs/product/inventory-requirements-questionnaire.md)
 - [Online attendance](docs/product/attendance.md)
 - [Reporting and operational overview](docs/product/reporting.md)
 - [Unresolved requirements](docs/product/unresolved-requirements.md)

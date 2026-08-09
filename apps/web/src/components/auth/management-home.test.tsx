@@ -66,14 +66,10 @@ describe("authenticated home (management overview vs system status)", () => {
     expect(
       await screen.findByRole("heading", { name: "Overview" }),
     ).toBeInTheDocument();
-    // The management shell renders both mobile and desktop navigation; at
-    // least one must mark the Overview entry as current.
-    const overviewLinks = screen.getAllByRole("link", { name: "Overview" });
-    expect(
-      overviewLinks.some(
-        (link) => link.getAttribute("aria-current") === "page",
-      ),
-    ).toBe(true);
+    // The persistent sidebar marks the Overview entry as current. The phone
+    // drawer is hidden until opened, so only the visible link is matched.
+    const overviewLink = screen.getByRole("link", { name: "Overview" });
+    expect(overviewLink.getAttribute("aria-current")).toBe("page");
     expect(await screen.findByText("Today · 2026-08-08")).toBeInTheDocument();
     // The technical system status is subordinate, not the page itself.
     expect(screen.getByLabelText("System status")).toBeInTheDocument();
@@ -89,10 +85,8 @@ describe("authenticated home (management overview vs system status)", () => {
     expect(
       await screen.findByRole("heading", { name: "System status" }),
     ).toBeInTheDocument();
-    const statusLinks = screen.getAllByRole("link", { name: "System status" });
-    expect(
-      statusLinks.some((link) => link.getAttribute("aria-current") === "page"),
-    ).toBe(true);
+    const statusLink = screen.getByRole("link", { name: "System status" });
+    expect(statusLink.getAttribute("aria-current")).toBe("page");
     expect(screen.getByText("Protected API connection")).toBeInTheDocument();
     expect(screen.getByText("Access confirmed")).toBeInTheDocument();
     // No reporting data is requested for this user.

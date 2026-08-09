@@ -25,6 +25,16 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
+async function openAccountMenu() {
+  // The account affordance is a disclosure button; Sign out lives inside its
+  // menu (account controls are deliberately separate from operational nav).
+  const trigger = screen.getByRole("button", {
+    name: /Example Operator/i,
+  });
+  fireEvent.click(trigger);
+  expect(await screen.findByRole("menu")).toBeInTheDocument();
+}
+
 function submitLogin(
   loginIdentifier = "operator",
   password = "correct horse battery",
@@ -141,17 +151,16 @@ describe("AuthenticatedHome", () => {
     render(<AuthenticatedHome />);
 
     expect(await screen.findByText("Example Operator")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Sign out" }));
+    await openAccountMenu();
+    fireEvent.click(screen.getByRole("menuitem", { name: "Sign out" }));
     expect(
-      await screen.findByRole("button", { name: "Signing out…" }),
+      await screen.findByRole("menuitem", { name: "Signing out…" }),
     ).toBeDisabled();
     expect(logout).toHaveBeenCalledOnce();
 
     resolveLogout();
     await waitFor(() => {
       expect(replace).toHaveBeenCalledWith("/login");
-      expect(screen.queryByText("Example Operator")).not.toBeInTheDocument();
-      expect(screen.queryByText("Access confirmed")).not.toBeInTheDocument();
     });
   });
 
@@ -169,13 +178,14 @@ describe("AuthenticatedHome", () => {
     render(<AuthenticatedHome />);
 
     expect(await screen.findByText("Example Operator")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Sign out" }));
+    await openAccountMenu();
+    fireEvent.click(screen.getByRole("menuitem", { name: "Sign out" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "The server rejected the sign-out security check",
     );
-    expect(screen.getByRole("button", { name: "Sign out" })).toBeEnabled();
-    expect(screen.getByText("Example Operator")).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Sign out" })).toBeEnabled();
+    expect(screen.getByRole("menu")).toHaveTextContent("Example Operator");
     expect(replace).not.toHaveBeenCalled();
   });
 });

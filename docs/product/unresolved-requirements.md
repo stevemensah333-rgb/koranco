@@ -56,6 +56,41 @@ These questions require confirmation from accountable Koranco stakeholders. They
 - Which unit conversions, if any, are official?
 - What traceability is required in the initial scope without entering deferred full batch/export traceability?
 
+## Inventory
+
+Inventory is in design only (see [inventory.md](inventory.md) and the
+[questionnaire](inventory-requirements-questionnaire.md)); no code is
+implemented. The following are open Koranco decisions and are not inferred:
+
+- Which input categories does Koranco actually stock and track (fertilizer,
+  agrochemicals, planting materials, PPE, packaging, tools, fuel, consumables,
+  other)?
+- Are there existing item codes, and what format do they use?
+- What is the official unit of each item, and are any authoritative unit
+  conversions defined (e.g. bag to kg)? Conversions are not assumed.
+- One store or multiple stock locations?
+- Who records receipts and who records issues — Managers only, or Managers and
+  Supervisors?
+- Do Supervisors record input usage in the field (possible offline need) or at
+  the store/office online?
+- Is FarmUnit attribution on issues required, optional, or unnecessary?
+- Does "issued from store" mean "already applied to the field," or are issue and
+  actual application separate events?
+- Are approvals required before a receipt/issue takes effect?
+- What is the negative-stock policy (hard-prevent is the proposed default)?
+- Are item-specific reorder thresholds used, or should low-stock alerts be
+  deferred?
+- Are batch/lot numbers and/or expiry dates required (likely relevant only to
+  some agrochemicals)?
+- Are supplier records and invoice/delivery references required, or is optional
+  free text sufficient? Are purchase orders/procurement in scope?
+- Is cost or stock valuation required, or quantity/control only?
+- Are there existing stock books/spreadsheets and current opening balances to
+  migrate?
+- Is offline Inventory capture required, or online-only?
+- Should Worker application accounts have any inventory access (proposed: none)?
+- Who may perform stock adjustments/reversals (proposed: Managers only)?
+
 ## Corrections
 
 - Which record types can be corrected, by whom, and within what time window?

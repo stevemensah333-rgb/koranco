@@ -109,7 +109,7 @@ export function WorkerRegister() {
       </main>
     );
   return (
-    <ManagementShell navigation={domainNavigation("workers", user)}>
+    <ManagementShell navigation={domainNavigation("workers", user)} user={user}>
       <PageHeader
         title="Worker register"
         description="Stable operational identities for later attendance and harvest. Application accounts are managed separately."
