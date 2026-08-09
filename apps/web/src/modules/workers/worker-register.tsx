@@ -5,9 +5,11 @@ import { ManagementShell } from "@/components/shells/management-shell";
 import { managementNavigation } from "@/components/shells/management-navigation";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingIndicator } from "@/components/ui/loading-indicator";
 import { PageHeader } from "@/components/ui/page-header";
 import { TextInput } from "@/components/ui/inputs";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { getCurrentSession, type AuthenticatedUser } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/client";
 import {
@@ -125,7 +127,11 @@ export function WorkerRegister() {
         </Alert>
       ) : null}
       <section className="content-section">
-        <form className="register-filters" onSubmit={(e) => e.preventDefault()}>
+        <form
+          aria-label="Filter workers"
+          className="register-filters"
+          onSubmit={(e) => e.preventDefault()}
+        >
           <label>
             Search
             <TextInput
@@ -186,13 +192,21 @@ export function WorkerRegister() {
         {workers === null && !error ? (
           <LoadingIndicator label="Loading workers…" />
         ) : workers?.length === 0 ? (
-          <p>
-            {search || status
-              ? "No workers match the current search and filter."
-              : "No workers have been added to the register."}
-          </p>
+          <EmptyState
+            description={
+              search || status
+                ? "No workers match the current search and filter."
+                : "No workers have been added to the register."
+            }
+            heading="No workers found"
+          />
         ) : workers ? (
-          <div className="table-scroll" tabIndex={0}>
+          <div
+            aria-label="Worker register"
+            className="table-scroll"
+            role="region"
+            tabIndex={0}
+          >
             <table className="data-table">
               <caption className="sr-only">Worker register</caption>
               <thead>
@@ -208,13 +222,21 @@ export function WorkerRegister() {
                   <tr key={worker.id}>
                     <td>{worker.worker_code}</td>
                     <td>{worker.full_name}</td>
-                    <td>{worker.status}</td>
+                    <td>
+                      <StatusBadge
+                        tone={
+                          worker.status === "active" ? "success" : "neutral"
+                        }
+                      >
+                        {worker.status === "active" ? "Active" : "Inactive"}
+                      </StatusBadge>
+                    </td>
                     <td>
                       <div className="table-actions">
                         {canEdit ? (
                           <>
                             <Button
-                              variant="secondary"
+                              variant="quiet"
                               onClick={() => setEditing(worker)}
                             >
                               Edit
@@ -237,7 +259,7 @@ export function WorkerRegister() {
                           "operational_audit.read",
                         ) ? (
                           <Button
-                            variant="secondary"
+                            variant="quiet"
                             onClick={() =>
                               void workerAudit(worker.id).then((r) =>
                                 setHistory({ worker, items: r.items }),
@@ -261,14 +283,20 @@ export function WorkerRegister() {
           <h2 className="section-heading">
             History for {history.worker.worker_code}
           </h2>
-          {history.items.map((item) => (
-            <p key={item.id}>
-              <strong>{item.action}</strong> · by {item.actor_display_name} ·{" "}
-              {new Date(item.occurred_at).toLocaleString()}
-              {item.reason ? ` · ${item.reason}` : ""}
-            </p>
-          ))}
-          <Button variant="secondary" onClick={() => setHistory(null)}>
+          {history.items.length ? (
+            <ol className="audit-list">
+              {history.items.map((item) => (
+                <li key={item.id}>
+                  <strong>{item.action}</strong> · by {item.actor_display_name}{" "}
+                  · {new Date(item.occurred_at).toLocaleString()}
+                  {item.reason ? ` · ${item.reason}` : ""}
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <p className="muted-text">No history is available.</p>
+          )}
+          <Button variant="quiet" onClick={() => setHistory(null)}>
             Close history
           </Button>
         </section>

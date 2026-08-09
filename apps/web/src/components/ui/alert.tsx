@@ -12,7 +12,7 @@ export function Alert({ children, title, tone = "info" }: AlertProps) {
   return (
     <div
       className={`alert alert-${tone}`}
-      role={tone === "error" ? "alert" : undefined}
+      role={tone === "error" ? "alert" : "status"}
     >
       <div className="alert-body">
         <p className="alert-title">{title}</p>

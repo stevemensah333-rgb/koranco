@@ -4,9 +4,11 @@ import { useEffect, useState, type FormEvent } from "react";
 import { ManagementShell } from "@/components/shells/management-shell";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingIndicator } from "@/components/ui/loading-indicator";
 import { PageHeader } from "@/components/ui/page-header";
 import { TextInput } from "@/components/ui/inputs";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { getCurrentSession, type AuthenticatedUser } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/client";
 import { domainNavigation } from "@/modules/workers/worker-register";
@@ -136,7 +138,11 @@ export function FarmStructureRegister() {
         </Alert>
       ) : null}
       <section className="content-section">
-        <form className="register-filters" onSubmit={(e) => e.preventDefault()}>
+        <form
+          aria-label="Filter farm structure"
+          className="register-filters"
+          onSubmit={(e) => e.preventDefault()}
+        >
           <label>
             Search
             <TextInput
@@ -236,13 +242,21 @@ export function FarmStructureRegister() {
         {units === null && !error ? (
           <LoadingIndicator label="Loading farm structure…" />
         ) : units?.length === 0 ? (
-          <p>
-            {search || status || type
-              ? "No farm units match the current search and filters."
-              : "No farm units have been added."}
-          </p>
+          <EmptyState
+            description={
+              search || status || type
+                ? "No farm units match the current search and filters."
+                : "No farm units have been added."
+            }
+            heading="No farm units found"
+          />
         ) : units ? (
-          <div className="table-scroll" tabIndex={0}>
+          <div
+            aria-label="Farm structure register"
+            className="table-scroll"
+            role="region"
+            tabIndex={0}
+          >
             <table className="data-table">
               <caption className="sr-only">Farm structure register</caption>
               <thead>
@@ -265,13 +279,19 @@ export function FarmStructureRegister() {
                     </td>
                     <td>{unit.unit_type}</td>
                     <td>{parentName(unit.parent_id)}</td>
-                    <td>{unit.status}</td>
+                    <td>
+                      <StatusBadge
+                        tone={unit.status === "active" ? "success" : "neutral"}
+                      >
+                        {unit.status === "active" ? "Active" : "Inactive"}
+                      </StatusBadge>
+                    </td>
                     <td>
                       <div className="table-actions">
                         {canEdit ? (
                           <>
                             <Button
-                              variant="secondary"
+                              variant="quiet"
                               onClick={() => setEditing(unit)}
                             >
                               Edit
@@ -294,7 +314,7 @@ export function FarmStructureRegister() {
                           "operational_audit.read",
                         ) ? (
                           <Button
-                            variant="secondary"
+                            variant="quiet"
                             onClick={() =>
                               void farmUnitAudit(unit.id).then((r) =>
                                 setHistory({ unit, items: r.items }),
@@ -316,13 +336,19 @@ export function FarmStructureRegister() {
       {history ? (
         <section className="content-section">
           <h2 className="section-heading">History for {history.unit.code}</h2>
-          {history.items.map((item) => (
-            <p key={item.id}>
-              <strong>{item.action}</strong> · by {item.actor_display_name} ·{" "}
-              {new Date(item.occurred_at).toLocaleString()}
-            </p>
-          ))}
-          <Button variant="secondary" onClick={() => setHistory(null)}>
+          {history.items.length ? (
+            <ol className="audit-list">
+              {history.items.map((item) => (
+                <li key={item.id}>
+                  <strong>{item.action}</strong> · by {item.actor_display_name}{" "}
+                  · {new Date(item.occurred_at).toLocaleString()}
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <p className="muted-text">No history is available.</p>
+          )}
+          <Button variant="quiet" onClick={() => setHistory(null)}>
             Close history
           </Button>
         </section>

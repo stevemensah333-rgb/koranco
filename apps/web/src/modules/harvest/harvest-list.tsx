@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { TextInput } from "@/components/ui/inputs";
 import { LoadingIndicator } from "@/components/ui/loading-indicator";
 import { PageHeader } from "@/components/ui/page-header";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { getCurrentSession, type AuthenticatedUser } from "@/lib/api/auth";
 import {
   cacheFarmUnits,
@@ -24,14 +25,6 @@ import { listHarvest, type HarvestRecord } from "./api";
 
 const unitLabel = (unit: string) =>
   unit === "fruit_count" ? "Fruit count" : "Kilograms";
-
-function localStatus(item: LocalHarvestDraft) {
-  if (item.state === "synced") return "Server confirmed";
-  if (item.state === "needs_attention") return "Needs attention";
-  if (item.state === "pending_submission" || item.state === "syncing")
-    return "Waiting to sync";
-  return "Saved on this device";
-}
 
 export function HarvestList() {
   const [user, setUser] = useState<AuthenticatedUser | null>(null);
@@ -181,24 +174,56 @@ export function HarvestList() {
             <h2 className="section-heading">On this device</h2>
             {localItems.length ? (
               <div className="device-record-list">
-                {localItems.map((item) => (
-                  <p key={item.id}>
-                    <Link href={`/harvest/${item.id}`}>
-                      {item.harvestDate} · {item.quantity || "No quantity"}{" "}
-                      {item.unit ? unitLabel(item.unit) : ""}
-                    </Link>
-                    {" · "}
-                    {localStatus(item)}
-                  </p>
-                ))}
+                {localItems.map((item) => {
+                  const waiting =
+                    item.state === "pending_submission" ||
+                    item.state === "syncing";
+                  const label =
+                    item.state === "synced"
+                      ? "Server confirmed"
+                      : item.state === "needs_attention"
+                        ? "Needs attention"
+                        : waiting
+                          ? "Waiting to sync"
+                          : "Saved on this device";
+                  return (
+                    <div className="device-record" key={item.id}>
+                      <Link
+                        className="device-record-link"
+                        href={`/harvest/${item.id}`}
+                      >
+                        {item.harvestDate} · {item.quantity || "No quantity"}{" "}
+                        {item.unit ? unitLabel(item.unit) : ""}
+                      </Link>
+                      <StatusBadge
+                        pending={waiting}
+                        tone={
+                          item.state === "synced"
+                            ? "success"
+                            : item.state === "needs_attention"
+                              ? "error"
+                              : "info"
+                        }
+                      >
+                        {label}
+                      </StatusBadge>
+                    </div>
+                  );
+                })}
               </div>
             ) : (
-              <p>No Harvest is saved on this device for this user.</p>
+              <p className="muted-text">
+                No Harvest is saved on this device for this user.
+              </p>
             )}
           </section>
           <section className="content-section">
             <h2 className="section-heading">Official records</h2>
-            <div className="register-filters">
+            <div
+              aria-label="Filter official Harvest records"
+              className="register-filters"
+              role="group"
+            >
               <label>
                 Status
                 <select
@@ -247,14 +272,19 @@ export function HarvestList() {
                 No server-confirmed Harvest records match the current filters.
               </p>
             ) : (
-              <div className="table-scroll" tabIndex={0}>
+              <div
+                aria-label="Official Harvest records"
+                className="table-scroll"
+                role="region"
+                tabIndex={0}
+              >
                 <table className="data-table">
                   <caption className="sr-only">Harvest records</caption>
                   <thead>
                     <tr>
                       <th>Date</th>
                       <th>FarmUnit</th>
-                      <th>Quantity</th>
+                      <th className="cell-numeric">Quantity</th>
                       <th>Status</th>
                       <th>Recorded by</th>
                       <th>Action</th>
@@ -271,10 +301,23 @@ export function HarvestList() {
                             {item.farm_unit_name} · {item.farm_unit_type}
                           </span>
                         </td>
-                        <td className="numeric">
+                        <td className="cell-numeric">
                           {item.quantity} {unitLabel(item.unit)}
                         </td>
-                        <td>{item.status}</td>
+                        <td>
+                          <StatusBadge
+                            pending={item.status === "draft"}
+                            tone={
+                              item.status === "submitted"
+                                ? "success"
+                                : "warning"
+                            }
+                          >
+                            {item.status === "submitted"
+                              ? "Submitted"
+                              : "Draft"}
+                          </StatusBadge>
+                        </td>
                         <td>
                           {item.submitted_by_name ?? item.created_by_name}
                         </td>

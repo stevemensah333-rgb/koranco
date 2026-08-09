@@ -33,9 +33,9 @@ The sign-in page uses the approved Koranco farm photograph as a full-viewport ba
 
 ## Component principles
 
-- Buttons express one clear action and have primary, secondary, danger, disabled, and full-width field forms.
+- Buttons express one clear action and have primary, secondary, danger, quiet, disabled, and full-width field forms. Quiet actions suit non-destructive row utilities; danger is reserved for confirmed destructive actions.
 - Labels remain visible. Guidance precedes the control; errors follow it and are associated programmatically.
-- Badges describe compact state. Alerts explain consequence and recovery.
+- Badges describe compact state using a label and marker, never color alone. Alerts explain consequence and recovery.
 - Tables retain semantic headers and captions, align numeric cells, expose intentional horizontal overflow to keyboard users, and provide loading/empty rows.
 - Empty states explain what is absent and offer an action only when a valid next step exists.
 - Loading indicators include accessible text and reduced-motion behavior.

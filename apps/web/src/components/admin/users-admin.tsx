@@ -3,9 +3,11 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingIndicator } from "@/components/ui/loading-indicator";
 import { PageHeader } from "@/components/ui/page-header";
 import { TextInput } from "@/components/ui/inputs";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { ApiError } from "@/lib/api/client";
 import {
   changeRole,
@@ -254,9 +256,17 @@ export function UsersAdmin() {
         {!users ? (
           <LoadingIndicator label="Loading users…" />
         ) : users.length === 0 ? (
-          <p>No application users exist.</p>
+          <EmptyState
+            description="No application users exist."
+            heading="No application users"
+          />
         ) : (
-          <div className="table-scroll" tabIndex={0}>
+          <div
+            aria-label="Application user accounts"
+            className="table-scroll"
+            role="region"
+            tabIndex={0}
+          >
             <table className="data-table">
               <caption className="sr-only">Application user accounts</caption>
               <thead>
@@ -280,6 +290,7 @@ export function UsersAdmin() {
                     <td>
                       <select
                         aria-label={`Role for ${user.display_name}`}
+                        className="select-input select-input-compact"
                         value={user.role}
                         onChange={(e) =>
                           void roleChange(user, e.target.value as Role)
@@ -291,10 +302,20 @@ export function UsersAdmin() {
                       </select>
                     </td>
                     <td>
-                      {user.status}
-                      {user.password_change_required
-                        ? " · password change required"
-                        : ""}
+                      <div className="table-statuses">
+                        <StatusBadge
+                          tone={
+                            user.status === "active" ? "success" : "neutral"
+                          }
+                        >
+                          {user.status === "active" ? "Active" : "Disabled"}
+                        </StatusBadge>
+                        {user.password_change_required ? (
+                          <StatusBadge tone="warning">
+                            Password change required
+                          </StatusBadge>
+                        ) : null}
+                      </div>
                     </td>
                     <td>
                       <div className="table-actions">
@@ -313,7 +334,7 @@ export function UsersAdmin() {
                           Reset password
                         </Button>
                         <Button
-                          variant="secondary"
+                          variant="quiet"
                           onClick={() =>
                             void revokeUserSessions(user.id).then(() =>
                               setMessage("Sessions revoked."),

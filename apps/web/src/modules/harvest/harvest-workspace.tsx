@@ -18,7 +18,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { FieldShell } from "@/components/shells/field-shell";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { TextInput } from "@/components/ui/inputs";
+import { TextArea, TextInput } from "@/components/ui/inputs";
 import { LoadingIndicator } from "@/components/ui/loading-indicator";
 import { getCurrentSession, type AuthenticatedUser } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/client";
@@ -621,8 +621,7 @@ export function HarvestWorkspace({ id }: { id: string }) {
         </label>
         <label>
           Operational note (optional)
-          <textarea
-            className="text-input"
+          <TextArea
             maxLength={500}
             value={notes}
             disabled={submitted && !correcting}
